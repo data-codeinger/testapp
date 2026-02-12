@@ -51,7 +51,7 @@ export default function App() {
     <ToastProvider>
       <AppStateProvider>
         <IPhone17ProFrame>
-          <div className="h-full bg-canvas font-inter">
+          <div className="h-full bg-white font-inter">
             <Routes>
               <Route path="/" element={<Navigate to="/activity" replace />} />
               <Route element={<MainLayout />}>

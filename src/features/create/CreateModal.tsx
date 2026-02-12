@@ -16,61 +16,195 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
     activityType: '',
     location: '',
     date: '',
-    gender: 'any',
-    intention: '',
-    plan: ''
+    guests: '',
+    fees: '',
+    plan: '',
+    gender: ''
   });
 
-  const activityTypes = ['shopping', 'coffee', 'movie', 'wandering', 'sports', 'food', 'music'];
-  const intentions = [
-    { value: 'friends', label: 'Make Friends' },
-    { value: 'paid-by-me', label: 'Paid by Me' },
-    { value: 'ttmm', label: 'TTMM (Treat To Me)' }
+  const [locationInput, setLocationInput] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+  const activityTypes = [
+    { id: 'breakfast', label: 'Breakfast', icon: '🍳' },
+    { id: 'brunch', label: 'Brunch', icon: '🥞' },
+    { id: 'dinner', label: 'Dinner', icon: '🍽️' },
+    { id: 'coffee', label: 'Coffee', icon: '☕' },
+    { id: 'cafe', label: 'Cafe', icon: '🏪' },
+    { id: 'picnic', label: 'Picnic', icon: '🧺' },
+    { id: 'book', label: 'Book', icon: '📚' },
+    { id: 'movie', label: 'Movie', icon: '🎬' },
+    { id: 'live-music', label: 'Live Music', icon: '🎵' },
+    { id: 'art', label: 'Art', icon: '🎨' },
+    { id: 'party', label: 'Party', icon: '🎉' },
+    { id: 'concert', label: 'Concert', icon: '🎤' },
+    { id: 'standup', label: 'Standup', icon: '🎭' },
+    { id: 'outdoor', label: 'Outdoor', icon: '🏕️' },
+    { id: 'nature', label: 'Nature', icon: '🌲' },
+    { id: 'volunteer', label: 'Volunteer', icon: '🤝' },
+    { id: 'health', label: 'Health', icon: '💪' },
+    { id: 'shopping', label: 'Shopping', icon: '🛍️' },
+    { id: 'wandering', label: 'Wandering', icon: '🚶' },
+    { id: 'bike-riding', label: 'Bike Riding', icon: '🚴' }
   ];
 
+  const guestOptions = [
+    { value: '1:1', label: '1:1' },
+    { value: '2-4', label: '2-4' },
+    { value: '6-8', label: '6-8' },
+    { value: '10-12', label: '10-12' },
+    { value: '12+', label: '12+' }
+  ];
+
+  const feeOptions = [
+    { value: 'free', label: 'Free' },
+    { value: 'byob', label: 'BYOB' },
+    { value: 'attendance-fee', label: 'Attendance Fee Applicable' },
+    { value: 'split-bill', label: 'Split the Bill' },
+    { value: 'on-me', label: "It's on Me" }
+  ];
+
+  const genderOptions = [
+    { value: 'any', label: 'Any' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  // Mock location suggestions (in real app, this would call Google Places API)
+  const mockLocations = [
+    'Seasons Mall', 'Phoenix Marketcity', 'FC Road', 'Koregaon Park',
+    'Pune Station', 'Shaniwar Wada', 'Aga Khan Palace', 'Sinhagad Fort',
+    'Laxmi Road', 'JM Road', 'Camp Area', 'Kalyani Nagar', 'Viman Nagar',
+    'Baner', 'Aundh', 'Wakad', 'Hinjewadi', 'Magarpatta City', 'Bund Garden'
+  ];
+
+  const handleLocationSearch = (query: string) => {
+    setLocationInput(query);
+    if (query.length > 0) {
+      const filtered = mockLocations.filter(loc => 
+        loc.toLowerCase().includes(query.toLowerCase())
+      );
+      setLocationSuggestions(filtered);
+    } else {
+      setLocationSuggestions([]);
+    }
+  };
+
+  const selectLocation = (location: string) => {
+    if (!selectedLocations.includes(location)) {
+      setSelectedLocations([...selectedLocations, location]);
+    }
+    setLocationInput('');
+    setLocationSuggestions([]);
+  };
+
+  const removeLocation = (location: string) => {
+    setSelectedLocations(selectedLocations.filter(loc => loc !== location));
+  };
+
+  const handleLocationKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && locationInput.trim()) {
+      selectLocation(locationInput.trim());
+    }
+  };
+
   const handleSubmit = () => {
-    console.log('Activity Data:', formData);
+    const activityData = {
+      ...formData,
+      locations: selectedLocations
+    };
+    console.log('Activity Data:', activityData);
     onClose();
   };
 
   return (
-    <div className="space-y-4">
-      {/* Activity Type */}
+    <div className="space-y-6">
+      {/* Activity Type Grid */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Activity Type</label>
-        <select 
-          value={formData.activityType}
-          onChange={(e) => setFormData(prev => ({ ...prev, activityType: e.target.value }))}
-          className="w-full rounded-tile bg-subtle-bg px-3 py-3 text-body"
-        >
-          <option value="">Select activity type</option>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Activity Type</label>
+        <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
           {activityTypes.map(type => (
-            <option key={type} value={type} className="capitalize">
-              {type}
-            </option>
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, activityType: type.id }))}
+              className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
+                formData.activityType === type.id
+                  ? 'border-[#67295F] bg-[#67295F]/10 text-[#67295F]'
+                  : 'border-[#F2F2F2] bg-white text-[#1A1A1A] hover:border-[#67295F]/50'
+              }`}
+            >
+              <span className="text-lg mb-1">{type.icon}</span>
+              <span className="text-xs font-medium leading-tight">{type.label}</span>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       {/* Location */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Location</label>
-        <input
-          type="text"
-          value={formData.location}
-          onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-          placeholder="e.g., Seasons Mall"
-          className="w-full rounded-tile bg-subtle-bg px-3 py-3 text-body placeholder:text-secondary"
-        />
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Location</label>
+        
+        {/* Search Input */}
+        <div className="relative">
+          <input
+            type="text"
+            value={locationInput}
+            onChange={(e) => handleLocationSearch(e.target.value)}
+            onKeyDown={handleLocationKeyDown}
+            placeholder="Type location name..."
+            className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F]"
+          />
+          
+          {/* Suggestions Dropdown */}
+          {locationSuggestions.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-[#F2F2F2] rounded-lg shadow-subtle max-h-32 overflow-y-auto">
+              {locationSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => selectLocation(suggestion)}
+                  className="w-full px-4 py-2 text-left text-sm text-[#1A1A1A] hover:bg-[#F2F2F2] transition-colors"
+                >
+                  📍 {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Selected Location Buttons */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selectedLocations.map(location => (
+            <button
+              key={location}
+              type="button"
+              onClick={() => removeLocation(location)}
+              className="bg-[#F2F2F2] rounded-full px-3 py-1 text-xs font-medium text-[#1A1A1A] hover:bg-[#67295F]/10 transition-colors group"
+            >
+              {location}
+              <span className="ml-1 text-[#717171] group-hover:text-[#67295F]">×</span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Quick Select Buttons */}
         <div className="mt-2 flex flex-wrap gap-2">
           {['Seasons Mall', 'FC Road', 'Phoenix Marketcity', 'Koregaon Park'].map(location => (
             <button
               key={location}
               type="button"
-              onClick={() => setFormData(prev => ({ ...prev, location }))}
-              className="bg-subtle-bg rounded-full px-3 py-1 text-xs font-medium text-primary"
+              onClick={() => selectLocation(location)}
+              disabled={selectedLocations.includes(location)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                selectedLocations.includes(location)
+                  ? 'bg-[#67295F]/10 text-[#67295F] cursor-not-allowed'
+                  : 'bg-[#F2F2F2] text-[#1A1A1A] hover:bg-[#67295F]/10'
+              }`}
             >
-              {location}
+              {selectedLocations.includes(location) ? '✓ ' : ''}{location}
             </button>
           ))}
         </div>
@@ -78,41 +212,61 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
 
       {/* Date */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Date</label>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Date</label>
         <input
           type="datetime-local"
           value={formData.date}
           onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-          className="w-full rounded-tile bg-subtle-bg px-3 py-3 text-body"
+          className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
         />
       </div>
 
-      {/* Gender */}
+      {/* Guests Filter */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Gender Preference</label>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Guests</label>
         <select 
-          value={formData.gender}
-          onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
-          className="w-full rounded-tile bg-subtle-bg px-3 py-3 text-body"
+          value={formData.guests}
+          onChange={(e) => setFormData(prev => ({ ...prev, guests: e.target.value }))}
+          className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
         >
-          <option value="any">Any</option>
-          <option value="men">Men</option>
-          <option value="women">Women</option>
+          <option value="">Select guest count</option>
+          {guestOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </div>
 
-      {/* Intention */}
+      {/* Fees Filter */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Intention</label>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Fees</label>
         <select 
-          value={formData.intention}
-          onChange={(e) => setFormData(prev => ({ ...prev, intention: e.target.value }))}
-          className="w-full rounded-tile bg-subtle-bg px-3 py-3 text-body"
+          value={formData.fees}
+          onChange={(e) => setFormData(prev => ({ ...prev, fees: e.target.value }))}
+          className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
         >
-          <option value="">Select intention</option>
-          {intentions.map(intention => (
-            <option key={intention.value} value={intention.value}>
-              {intention.label}
+          <option value="">Select fee type</option>
+          {feeOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Gender Filter */}
+      <div>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Gender</label>
+        <select 
+          value={formData.gender}
+          onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+          className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+        >
+          <option value="">Select gender</option>
+          {genderOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
@@ -120,21 +274,21 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
 
       {/* Plan Description */}
       <div>
-        <label className="block text-sm font-medium text-headline mb-2">Plan</label>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Plan</label>
         <textarea
           value={formData.plan}
           onChange={(e) => setFormData(prev => ({ ...prev, plan: e.target.value }))}
           placeholder="Describe your plan..."
           rows={4}
-          className="w-full resize-none rounded-tile bg-subtle-bg p-3 text-body placeholder:text-secondary"
+          className="w-full resize-none rounded-lg border border-[#F2F2F2] bg-white p-4 text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F]"
         />
       </div>
 
       {/* Submit Button */}
       <button
         onClick={handleSubmit}
-        className="w-full bg-primary text-white py-3 rounded-tile hover:bg-primary/90 transition-colors"
-        disabled={!formData.activityType || !formData.location || !formData.plan}
+        className="w-full bg-[#1A1A1A] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+        disabled={!formData.activityType || selectedLocations.length === 0 || !formData.plan}
       >
         Create Activity
       </button>

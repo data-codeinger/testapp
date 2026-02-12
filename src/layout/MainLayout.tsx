@@ -12,20 +12,17 @@ function TabIcon({
   return (
     <div className="flex flex-col items-center justify-center gap-1">
       <div
-        className={clsx(
-          "flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-200",
+        className={`flex h-12 w-12 items-center justify-center rounded-lg transition-all duration-200 ${
           active 
-            ? "bg-primary text-white shadow-lg scale-110" 
-            : "text-zinc-600 hover:bg-zinc-100 hover:scale-105"
-        )}
+            ? "text-[#67295F] font-bold shadow-lg shadow-[#67295F]/50" 
+            : "text-[#1A1A1A] hover:text-[#67295F]"
+        }`}
       >
         {children}
       </div>
-      <div className="relative h-1 w-full">
-        {active && (
-          <div className="absolute left-1/2 h-1 w-6 -translate-x-1/2 rounded-full bg-primary shadow-lg" />
-        )}
-      </div>
+      {active && (
+        <div className="h-0.5 w-6 bg-[#67295F] rounded-full" />
+      )}
     </div>
   );
 }
@@ -53,26 +50,26 @@ export function MainLayout() {
       : "search";
 
   return (
-    <div className="relative h-full bg-canvas">
+    <div className="relative h-full bg-white">
       {/* main content with animated transitions */}
       <div className="h-full pb-20 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
             <Outlet />
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* bottom navigation - fixed at bottom with 20px margin */}
-      <div className="absolute bottom-0 left-0 right-0 z-40 pb-5">
-        <div className="mx-auto flex w-full max-w-md justify-center px-5">
-          <nav className="tile-bottom-nav flex w-full items-center justify-between">
+      {/* bottom navigation - solid white bar */}
+      <div className="absolute bottom-0 left-0 right-0 z-40">
+        <div className="bg-white border-t border-[#F2F2F2]">
+          <nav className="flex items-center justify-between py-2">
             <Link to={tabRoutes.search} className="flex-1">
               <TabIcon active={activeKey === "search"} label="Search">
                 {/* Search icon */}
@@ -89,12 +86,6 @@ export function MainLayout() {
                 </svg>
               </TabIcon>
             </Link>
-
-            {/* Empty space where FAB used to be */}
-            <div className="flex-1 flex justify-center">
-              <div className="w-12 h-12" />
-            </div>
-
             <Link to={tabRoutes.chats} className="flex-1">
               <TabIcon active={activeKey === "chats"} label="Chat">
                 {/* Chat icon */}

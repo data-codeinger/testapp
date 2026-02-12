@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const mockPosts = [
   {
     id: "p1",
+    companionId: "c1",
     authorName: "Sarah Chen",
     authorAvatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=200&h=200&fit=crop",
     description: "Amazing coffee session at Starbucks! The soft jazz and conversation made for the perfect morning. The latte art was a beautiful touch! ☕✨",
@@ -23,6 +24,7 @@ const mockPosts = [
   },
   {
     id: "p2",
+    companionId: "c2",
     authorName: "Mike Johnson",
     authorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
     description: "Lonavala hiking trip was incredible! Trekked through misty trails and reached the summit just in time for a breathtaking sunrise. 🏔️🌅",
@@ -39,6 +41,7 @@ const mockPosts = [
   },
   {
     id: "p3",
+    companionId: "c3",
     authorName: "Emma Wilson",
     authorAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop",
     description: "Movie night was a blast! Sci-fi thriller kept us on edge, followed by late-night street food. Perfect weekend vibes! 🎬🍿",
@@ -54,6 +57,7 @@ const mockPosts = [
   },
   {
     id: "p4",
+    companionId: "c4",
     authorName: "Alex Kumar",
     authorAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
     description: "Divine Italian dinner! Homemade pasta and the best tiramisu I've ever had. Felt like a quick trip to Italy. 🇮🇹🍝",
@@ -70,6 +74,7 @@ const mockPosts = [
   },
   {
     id: "p5",
+    companionId: "c5",
     authorName: "Lisa Park",
     authorAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop",
     description: "Retail therapy at Phoenix Marketcity! Great deals, bubble tea, and beautiful festive decorations. 🛍️🎁",
@@ -137,24 +142,21 @@ export function PostsPage() {
       </div>
 
       {/* Posts Content - One Post Per Page */}
-      <div className="mt-5 pb-8">
-        <AnimatePresence mode="wait">
-          {posts.map((post, index) => (
-            <motion.div
-              key={post.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="h-full"
-            >
+      <div className="mt-5 pb-8 space-y-6">
+        {posts.map((post, index) => (
+          <motion.div
+            key={post.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1, ease: "easeOut" }}
+          >
               <div className="tile-standard">
                 {/* Author Header */}
                 <div className="tile-standard">
                   <div className="flex items-start gap-3">
                     <button
                       type="button"
-                      onClick={() => nav(`/companion/${post.id}`)}
+                      onClick={() => nav(`/companion/${post.companionId}`)}
                       className="flex-shrink-0"
                     >
                       <div className="w-12 h-12 overflow-hidden rounded-full">
@@ -295,7 +297,6 @@ export function PostsPage() {
               </div>
             </motion.div>
           ))}
-        </AnimatePresence>
       </div>
 
       {/* Floating Action Button - Create Post */}

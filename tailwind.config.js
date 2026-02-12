@@ -11,19 +11,14 @@ export default {
         'card': '24px',
       },
       boxShadow: {
-        'diffuse-glow': '0 2px 4px rgba(0,0,0,0.02), 0 20px 40px rgba(0,0,0,0.08)',
-        'bottom-nav': '0 15px 45px rgba(0,0,0,0.1)',
-      },
-      backdropBlur: {
-        'glass': '40px',
-        'active': '35px',
-        'overlay': '50px',
+        'subtle': '0 1px 3px rgba(0,0,0,0.05)',
       },
       colors: {
-        'canvas': '#F8F9FB',
+        'canvas': '#FFFFFF',
         'primary': '#1A1A1A',
+        'accent': '#67295F',
         'white': '#FFFFFF',
-        'subtle-bg': '#F1F3F5',
+        'subtle-bg': '#F2F2F2',
         'overlay': 'rgba(0, 0, 0, 0.15)',
       },
       borderColor: {

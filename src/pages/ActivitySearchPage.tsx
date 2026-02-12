@@ -5,6 +5,7 @@ import { CreateModal } from "../features/create/CreateModal";
 import { ReportModal } from "../features/report/ReportModal";
 import { useAppState } from "../state/AppState";
 import { motion, AnimatePresence } from "framer-motion";
+import { VerifiedBadge } from "../components/VerifiedBadge";
 
 // Mock events data
 const mockEvents = [
@@ -38,9 +39,13 @@ type TabType = 'activity' | 'posts' | 'events';
 
 interface FilterState {
   eventTypes: string[];
-  day: string;
   date: string;
-  price: string;
+  fees: string;
+  guests: string;
+  gender: string;
+  ageMin: string;
+  ageMax: string;
+  distance: string;
 }
 
 function MapPreview({ label }: { label: string }) {
@@ -67,18 +72,144 @@ function LocationChip({ name }: { name: string }) {
   );
 }
 
+// Activity type icons mapping
+const activityTypeIcons: Record<string, string> = {
+  'breakfast': '🍳',
+  'brunch': '🥞',
+  'dinner': '🍽️',
+  'coffee': '☕',
+  'cafe': '🏪',
+  'picnic': '🧺',
+  'book': '📚',
+  'movie': '🎬',
+  'live-music': '🎵',
+  'art': '🎨',
+  'party': '🎉',
+  'concert': '🎤',
+  'standup': '🎭',
+  'outdoor': '🏕️',
+  'nature': '🌲',
+  'volunteer': '🤝',
+  'health': '💪',
+  'shopping': '🛍️',
+  'wandering': '🚶',
+  'bike-riding': '🚴',
+  'default': '📍'
+};
+
+const getActivityIcon = (activityName: string) => {
+  const name = activityName.toLowerCase();
+  for (const [type, icon] of Object.entries(activityTypeIcons)) {
+    if (name.includes(type) || name.includes(type.replace('-', ''))) {
+      return icon;
+    }
+  }
+  return activityTypeIcons.default;
+};
+
 export function ActivitySearchPage() {
   const { activities, bookedActivityIds, sendConnectionRequest } = useAppState();
   const nav = useNavigate();
   const [messageFor, setMessageFor] = useState<null | { id: string; name: string; companionName: string }>(
     null,
   );
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('activity');
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState<string | null>(null);
-  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
+  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [showEventMenu, setShowEventMenu] = useState<string | null>(null);
+  const [requestModal, setRequestModal] = useState<{ open: boolean; companionId: string; companionName: string } | null>(null);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [filterLocations, setFilterLocations] = useState<string[]>([]);
+  const [filterLocationInput, setFilterLocationInput] = useState('');
+  const [filterLocationSuggestions, setFilterLocationSuggestions] = useState<string[]>([]);
+  const [commitModal, setCommitModal] = useState<{ open: boolean; activityId: string; activityName: string; companionName: string } | null>(null);
+
+  // Activity types (same as CreateModal)
+  const activityTypes = [
+    { id: 'breakfast', label: 'Breakfast', icon: '🍳' },
+    { id: 'brunch', label: 'Brunch', icon: '🥞' },
+    { id: 'dinner', label: 'Dinner', icon: '🍽️' },
+    { id: 'coffee', label: 'Coffee', icon: '☕' },
+    { id: 'cafe', label: 'Cafe', icon: '🏪' },
+    { id: 'picnic', label: 'Picnic', icon: '🧺' },
+    { id: 'book', label: 'Book', icon: '📚' },
+    { id: 'movie', label: 'Movie', icon: '🎬' },
+    { id: 'live-music', label: 'Live Music', icon: '🎵' },
+    { id: 'art', label: 'Art', icon: '🎨' },
+    { id: 'party', label: 'Party', icon: '🎉' },
+    { id: 'concert', label: 'Concert', icon: '🎤' },
+    { id: 'standup', label: 'Standup', icon: '🎭' },
+    { id: 'outdoor', label: 'Outdoor', icon: '🏕️' },
+    { id: 'nature', label: 'Nature', icon: '🌲' },
+    { id: 'volunteer', label: 'Volunteer', icon: '🤝' },
+    { id: 'health', label: 'Health', icon: '💪' },
+    { id: 'shopping', label: 'Shopping', icon: '🛍️' },
+    { id: 'wandering', label: 'Wandering', icon: '🚶' },
+    { id: 'bike-riding', label: 'Bike Riding', icon: '🚴' }
+  ];
+  const mockLocations = [
+    'Seasons Mall', 'Phoenix Marketcity', 'FC Road', 'Koregaon Park',
+    'Pune Station', 'Shaniwar Wada', 'Aga Khan Palace', 'Sinhagad Fort',
+    'Laxmi Road', 'JM Road', 'Camp Area', 'Kalyani Nagar', 'Viman Nagar',
+    'Baner', 'Aundh', 'Wakad', 'Hinjewadi', 'Magarpatta City', 'Bund Garden'
+  ];
+
+  // Guest and fee options (same as CreateModal)
+  const guestOptions = [
+    { value: '1:1', label: '1:1' },
+    { value: '2-4', label: '2-4' },
+    { value: '6-8', label: '6-8' },
+    { value: '10-12', label: '10-12' },
+    { value: '12+', label: '12+' }
+  ];
+
+  const genderOptions = [
+    { value: 'any', label: 'Any' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const feeOptions = [
+    { value: 'free', label: 'Free' },
+    { value: 'byob', label: 'BYOB' },
+    { value: 'attendance-fee', label: 'Attendance Fee Applicable' },
+    { value: 'split-bill', label: 'Split the Bill' },
+    { value: 'on-me', label: "It's on Me" }
+  ];
+
+  const handleFilterLocationSearch = (query: string) => {
+    setFilterLocationInput(query);
+    if (query.length > 0) {
+      const filtered = mockLocations.filter(loc => 
+        loc.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilterLocationSuggestions(filtered);
+    } else {
+      setFilterLocationSuggestions([]);
+    }
+  };
+
+  const selectFilterLocation = (location: string) => {
+    if (!filterLocations.includes(location)) {
+      setFilterLocations([...filterLocations, location]);
+    }
+    setFilterLocationInput('');
+    setFilterLocationSuggestions([]);
+  };
+
+  const removeFilterLocation = (location: string) => {
+    setFilterLocations(filterLocations.filter(loc => loc !== location));
+  };
+
+  const handleFilterLocationKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && filterLocationInput.trim()) {
+      selectFilterLocation(filterLocationInput.trim());
+    }
+  };
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [reportModal, setReportModal] = useState<{ open: boolean; type: "activity" | "event" | "companion" | "post"; itemId: string; itemName?: string }>({
     open: false,
     type: "activity",
@@ -87,10 +218,47 @@ export function ActivitySearchPage() {
   
   const [filters, setFilters] = useState<FilterState>({
     eventTypes: [],
-    day: '',
     date: '',
-    price: '',
+    fees: '',
+    guests: '',
+    gender: '',
+    ageMin: '',
+    ageMax: '',
+    distance: '',
   });
+
+  const [selectedDay, setSelectedDay] = useState<string>('');
+
+  const handleRequest = (companionId: string, companionName: string) => {
+    setRequestModal({ open: true, companionId, companionName });
+    setRequestMessage('');
+  };
+
+  const sendRequest = () => {
+    if (requestModal && requestMessage.length >= 10) {
+      sendConnectionRequest(requestModal.companionId, requestModal.companionName, '');
+      setRequestModal(null);
+      setRequestMessage('');
+      // Navigate to message tab
+      // This would typically use React Router navigation
+      console.log('Request sent, navigate to messages');
+    }
+  };
+
+  const handleMessage = (activity: any) => {
+    // Navigate directly to the specific chat with this companion
+    nav(`/chats/${activity.companionId}`); // Navigate to specific chat screen
+    console.log('Open chat with companion:', activity.companionName, 'ID:', activity.companionId);
+  };
+
+  const handleCommit = (activityId: string, activityName: string, companionName: string) => {
+    setCommitModal({ 
+      open: true, 
+      activityId, 
+      activityName, 
+      companionName 
+    });
+  };
 
   const handleReportActivity = (id: string, name: string) => {
     setReportModal({ open: true, type: "activity", itemId: id, itemName: name });
@@ -107,22 +275,21 @@ export function ActivitySearchPage() {
       (filters.eventTypes.length === 0 || filters.eventTypes.some(type => 
         activity.intention?.includes(type)
       )) &&
-      (!filters.day || activity.date?.includes(filters.day)) &&
-      (!filters.price || (filters.price === 'free' && !('isPaid' in activity) || ('isPaid' in activity && !activity.isPaid)) || (filters.price === 'paid' && 'isPaid' in activity && activity.isPaid))
+      (!filters.fees || (filters.fees === 'free' && !('isPaid' in activity) || ('isPaid' in activity && !activity.isPaid)) || (filters.fees === 'paid' && 'isPaid' in activity && activity.isPaid))
     );
   }, [activities, bookedActivityIds, filters]);
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-canvas/80 backdrop-blur-md border-b border-subtle-bg">
+      <div className="sticky top-0 z-30 bg-white border-b border-[#F2F2F2]">
         <div className="mx-auto w-full max-w-md px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-primary">Discover</h1>
+            <h1 className="text-xl font-bold text-[#1A1A1A]">Discover</h1>
             <div className="flex gap-2">
               <button
                 onClick={() => setFilterDrawerOpen(true)}
-                className="tile-action-row p-2"
+                className="p-2 hover:bg-[#F2F2F2] rounded-lg transition-colors"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -130,7 +297,7 @@ export function ActivitySearchPage() {
               </button>
               <button
                 onClick={() => setCreateModalOpen(true)}
-                className="tile-action-active p-2"
+                className="p-2 bg-[#67295F] text-white rounded-lg transition-opacity hover:opacity-90"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -140,18 +307,42 @@ export function ActivitySearchPage() {
           </div>
 
           {/* Tab Switcher */}
-          <div className="tile-tab-bar mt-4">
+          <div className="flex bg-white border-b border-[#F2F2F2] mt-4">
             {(['activity', 'events'] as TabType[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                className={`flex-1 px-4 py-2 text-sm font-semibold transition-opacity duration-200 ${
                   activeTab === tab
-                    ? 'text-primary font-bold'
-                    : 'text-secondary hover:text-primary'
+                    ? 'text-[#67295F] font-bold'
+                    : 'text-[#717171] hover:text-[#1A1A1A]'
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Day Filter Buttons */}
+      <div className="sticky top-32 z-20 bg-white border-b border-[#F2F2F2]">
+        <div className="mx-auto w-full max-w-md px-4 py-3">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {['today', 'tomorrow', 'weekend', 'this-week', 'next-week'].map(day => (
+              <button
+                key={day}
+                onClick={() => {
+                  setSelectedDay(selectedDay === day ? '' : day);
+                  console.log('Selected day:', day);
+                }}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                  selectedDay === day
+                    ? 'bg-[#67295F] text-white shadow-lg shadow-[#67295F]/50'
+                    : 'bg-[#F2F2F2] text-[#1A1A1A] hover:bg-[#67295F]/10 hover:text-[#67295F]'
+                }`}
+              >
+                {day.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </button>
             ))}
           </div>
@@ -164,171 +355,219 @@ export function ActivitySearchPage() {
           {activeTab === 'activity' ? (
             <motion.div
               key="activity"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
             >
               {filteredActivities.length === 0 ? (
-                <div className="tile-standard text-center py-8">
-                  <p className="text-secondary">No activities found matching your filters.</p>
+                <div className="text-center py-8">
+                  <p className="text-[#717171]">No activities found matching your filters.</p>
                 </div>
               ) : (
                 filteredActivities.map((activity) => (
                   <motion.div
                     key={activity.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    {/* Single Cohesive Floating Tile for Activity */}
-                    <div className="tile-standard overflow-hidden">
-                      <div className="p-6">
-                        {/* Header with Profile Pic and Basic Info */}
-                        <div className="flex items-start gap-4 mb-4">
-                          <button
-                            type="button"
-                            onClick={() => nav(`/companion/${activity.companionId}`)}
-                            className="flex-shrink-0 w-20 h-20 overflow-hidden rounded-tile border-2 border-white/20"
-                            aria-label={`Open ${activity.companionName} profile`}
-                          >
-                            <img
-                              src={activity.companionAvatarUrl}
-                              alt={activity.companionName}
-                              className="h-full w-full object-cover"
-                            />
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="min-w-0 flex-1">
-                                <h3 className="text-lg font-semibold text-primary truncate">
-                                  {activity.activityName}
-                                </h3>
-                                <p className="text-sm text-secondary mt-1">
-                                  with <span className="font-medium">{activity.companionName}</span>
-                                </p>
-                                {activity.date && (
-                                  <div className="text-sm text-secondary mt-2 flex items-center gap-1">
-                                    📅 {activity.date}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="relative">
-                                <button
-                                  onClick={() => setShowReportMenu(
-                                    showReportMenu === activity.id ? null : activity.id
-                                  )}
-                                  className="p-2 hover:bg-subtle-bg rounded-full transition-colors"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                    <circle cx="8" cy="3" r="1.5"/>
-                                    <circle cx="8" cy="8" r="1.5"/>
-                                    <circle cx="8" cy="13" r="1.5"/>
-                                  </svg>
-                                </button>
-                                {showReportMenu === activity.id && (
-                                  <div className="absolute right-0 top-8 bg-white rounded-tile shadow-diffuse-glow border border-subtle-bg py-2 z-10 min-w-[140px]">
-                                    <button
-                                      onClick={() => handleReportActivity(activity.id, activity.activityName)}
-                                      className="w-full px-4 py-2 text-left text-sm text-secondary hover:text-primary transition-colors"
-                                    >
-                                      Report Activity
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Locations */}
-                        {activity.locations.length > 0 && (
-                          <div className="mb-4">
-                            <div className="text-xs font-semibold text-primary mb-2">📍 Locations</div>
-                            <div className="flex flex-wrap gap-2">
-                              {activity.locations.map((location: string) => (
-                                <a
-                                  key={location}
-                                  href={`https://maps.google.com/?q=${encodeURIComponent(location)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-subtle-bg px-3 py-1 rounded-full text-xs text-secondary hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                                >
-                                  {location}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* The Plan */}
-                        <div className="mb-4">
-                          <div className="text-xs font-semibold text-primary mb-2">📋 The Plan</div>
-                          <div className="text-sm text-secondary leading-relaxed bg-subtle-bg rounded-tile p-4 min-h-[120px]">
-                            {activity.description}
-                            {activity.description.length < 200 && (
-                              <>
-                                <br /><br />
-                                This is an extended description to provide more details about the activity. 
-                                We'll explore various aspects of this experience together, ensuring everyone 
-                                has a great time and feels comfortable throughout the journey. 
-                                The activity is designed to be inclusive and enjoyable for all participants.
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Intention */}
-                        {activity.intention && (
-                          <div className="mb-4">
-                            <div className="text-xs font-semibold text-primary mb-2">🎯 Intention</div>
-                            <div className="flex flex-wrap gap-2">
-                              {Array.isArray(activity.intention) ? activity.intention.map((tag: string) => (
-                                <span key={tag} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
-                                  {tag}
-                                </span>
-                              )) : (
-                                <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
-                                  {activity.intention}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-3 mt-6">
-                          <button
-                            onClick={() => setMessageFor({ 
-                              id: activity.id, 
-                              name: activity.activityName, 
-                              companionName: activity.companionName 
-                            })}
-                            className="tile-action-active flex-1 text-sm font-medium"
-                          >
-                            Join
-                          </button>
-                          <button
-                            onClick={() => {
-                              // Handle booking logic
-                              console.log('Booking activity:', activity.id);
-                            }}
-                            className="tile-action-row flex-1 text-sm font-medium text-secondary"
-                          >
-                            Book
-                          </button>
-                          <button
-                            onClick={() => {
-                              sendConnectionRequest(activity.companionId, activity.companionName, activity.companionAvatarUrl);
-                            }}
-                            className="tile-action-row flex-1 text-sm font-medium text-secondary"
-                          >
-                            Request
-                          </button>
+                    {/* Polaroid-style Activity Card - Initially Collapsed */}
+                    <div className="bg-white border-b border-[#F2F2F2]">
+                      {/* Large Photo at Top - Clickable for Profile */}
+                      <div className="w-full aspect-square overflow-hidden relative">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            nav(`/companion/${activity.companionId}`);
+                          }}
+                          className="cursor-pointer w-full h-full"
+                        >
+                          <img
+                            src={activity.companionAvatarUrl}
+                            alt={activity.companionName}
+                            className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                          />
+                          {/* Polaroid-style white border at bottom */}
+                          <div className="absolute bottom-0 left-0 right-0 h-12 bg-white"></div>
                         </div>
                       </div>
+                      
+                      {/* Companion Info */}
+                      <div className="px-4 pt-1 pb-4 bg-white">
+                        <div className="flex items-center gap-1">
+                          <p className="text-xl font-bold text-[#1A1A1A]">
+                            {activity.companionName}
+                          </p>
+                          <VerifiedBadge size="small" />
+                        </div>
+                      </div>
+
+                      {/* Clickable Area for Activity Info - Below Name */}
+                      <div 
+                        onClick={() => setExpandedCard(expandedCard === activity.id ? null : activity.id)}
+                        className="cursor-pointer bg-white border-b border-[#F2F2F2] px-4 pb-4 relative"
+                      >
+                        {/* Activity Type Icon + Name */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg">{getActivityIcon(activity.activityName)}</span>
+                          <span className="font-semibold text-[#1A1A1A]">{activity.activityName}</span>
+                        </div>
+                        
+                        {/* Date */}
+                        {activity.date && (
+                          <div className="flex items-center gap-2 text-[#717171] text-sm mb-2">
+                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>{activity.date}</span>
+                          </div>
+                        )}
+                        
+                        {/* Location */}
+                        {activity.locations.length > 0 && (
+                          <div className="flex items-center gap-2 text-[#717171] text-sm">
+                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span>{activity.locations[0]}</span>
+                            {activity.locations[1] && <span> · {activity.locations[1]}</span>}
+                          </div>
+                        )}
+                        
+                        {/* Fees/Price */}
+                        {activity.paidBy && (
+                          <div className="flex items-center gap-2 text-[#717171] text-sm mt-2">
+                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{activity.paidBy}</span>
+                          </div>
+                        )}
+
+                        {/* Dropdown Arrow Indicator */}
+                        <div className="absolute bottom-2 right-4">
+                          <svg 
+                            className={`h-4 w-4 text-[#717171] transition-transform duration-300 ${
+                              expandedCard === activity.id ? 'rotate-180' : ''
+                            }`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Expanded Content - Only shows when clicked */}
+                      {expandedCard === activity.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="border-t border-[#F2F2F2] overflow-hidden"
+                        >
+                          <div className="p-6">
+                            {/* Age Range */}
+                            <div className="mb-4">
+                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">👥 Age Range</div>
+                              <div className="text-sm text-[#717171]">
+                                25-35 years
+                              </div>
+                            </div>
+
+                            {/* Group Size */}
+                            <div className="mb-4">
+                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">👥 Group Size</div>
+                              <div className="text-sm text-[#717171]">
+                                2-4 people
+                              </div>
+                            </div>
+
+                            {/* Intention */}
+                            {activity.intention && (
+                              <div className="mb-6">
+                                <div className="text-sm font-semibold text-[#1A1A1A] mb-2">🎯 Intention</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {Array.isArray(activity.intention) ? activity.intention.map((tag: string) => (
+                                    <span key={tag} className="bg-[#67295F]/10 text-[#67295F] px-3 py-1 rounded-full text-xs font-medium">
+                                      {tag}
+                                    </span>
+                                  )) : (
+                                    <span className="bg-[#67295F]/10 text-[#67295F] px-3 py-1 rounded-full text-xs font-medium">
+                                      {activity.intention}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Location Chips */}
+                            {activity.locations.length > 0 && (
+                              <div className="mb-4">
+                                <div className="text-sm font-semibold text-[#1A1A1A] mb-2">📍 Locations</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {activity.locations.map((location: string) => (
+                                    <a
+                                      key={location}
+                                      href={`https://maps.google.com/?q=${encodeURIComponent(location)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center px-3 py-1 text-xs font-medium text-[#1A1A1A] border border-[#F2F2F2] rounded-full hover:bg-[#F2F2F2] transition-colors"
+                                    >
+                                      📍 {location}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* The Plan */}
+                            <div className="mb-6">
+                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">The Plan</div>
+                              <div className="text-sm text-[#717171] leading-relaxed">
+                                {activity.description}
+                                {activity.description.length < 200 && (
+                                  <>
+                                    <br /><br />
+                                    This is an extended description to provide more details about the activity. 
+                                    We'll explore various aspects of this experience together, ensuring everyone 
+                                    has a great time and feels comfortable throughout the journey. 
+                                    The activity is designed to be inclusive and enjoyable for all participants.
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 mt-6">
+                              <button
+                                onClick={() => handleRequest(activity.companionId, activity.companionName)}
+                                className="flex-1 py-2 px-3 bg-[#67295F] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                              >
+                                Request
+                              </button>
+                              <button
+                                onClick={() => handleMessage(activity)}
+                                className="flex-1 py-2 px-3 bg-[#67295F] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                              >
+                                Message
+                              </button>
+                              <button
+                                onClick={() => handleCommit(activity.id, activity.activityName, activity.companionName)}
+                                className="flex-1 py-2 px-3 bg-transparent border border-[#67295F] text-[#67295F] rounded-lg text-sm font-medium hover:bg-[#67295F]/10 transition-all shadow-lg shadow-[#67295F]/30 hover:shadow-[#67295F]/50"
+                              >
+                                Commit
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
                   </motion.div>
                 ))
@@ -437,15 +676,15 @@ export function ActivitySearchPage() {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 h-[100dvh] w-full max-w-sm z-50 bg-white shadow-diffuse-glow"
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 h-full w-80 bg-white border-l border-[#F2F2F2] z-50 overflow-y-auto"
             >
-              <div className="flex h-full flex-col">
-                <div className="flex items-center justify-between p-4 border-b border-subtle-bg">
-                  <h2 className="text-lg font-semibold text-primary">Filters</h2>
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-semibold text-[#1A1A1A]">Filter Activities</h2>
                   <button
                     onClick={() => setFilterDrawerOpen(false)}
-                    className="p-2 hover:bg-subtle-bg rounded-full transition-colors"
+                    className="p-2 hover:bg-[#F2F2F2] rounded-lg transition-colors"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -453,242 +692,286 @@ export function ActivitySearchPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6" style={{ maxHeight: 'calc(100dvh - 180px)' }}>
-                  {activeTab === 'activity' ? (
-                    // Activity Filters
-                    <>
-                      {/* Activity Type */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Activity Type</label>
-                        <div className="space-y-2">
-                          {['outdoor', 'food', 'sports', 'arts', 'networking', 'wellness', 'entertainment'].map(type => (
-                            <label key={type} className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={filters.eventTypes.includes(type)}
-                                onChange={(e) => {
-                                  const newTypes = e.target.checked 
-                                    ? [...filters.eventTypes, type]
-                                    : filters.eventTypes.filter(t => t !== type);
-                                  handleFiltersChange({ eventTypes: newTypes });
-                                }}
-                                className="w-4 h-4 text-primary border-subtle-bg rounded focus:ring-primary"
-                              />
-                              <span className="text-sm text-secondary capitalize">{type}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Day */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">When</label>
-                        <div className="space-y-2">
-                          {['today', 'tomorrow', 'weekend', 'this-week', 'next-week'].map(day => (
-                            <label key={day} className="flex items-center space-x-3">
-                              <input
-                                type="radio"
-                                name="day"
-                                checked={filters.day === day}
-                                onChange={() => handleFiltersChange({ day })}
-                                className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                              />
-                              <span className="text-sm text-secondary capitalize">{day.replace('-', ' ')}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Price */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Price</label>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === ''}
-                                                           onChange={() => handleFiltersChange({ price: '' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">All</span>
-                          </label>
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === 'free'}
-                              onChange={() => handleFiltersChange({ price: 'free' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">Free</span>
-                          </label>
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === 'paid'}
-                              onChange={() => handleFiltersChange({ price: 'paid' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">Paid</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Specific Date */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Specific Date</label>
-                        <input
-                          type="date"
-                          value={filters.date}
-                          onChange={(e) => handleFiltersChange({ date: e.target.value })}
-                          className="w-full rounded-tile border border-subtle-bg bg-white px-4 py-3 text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                    </>
-                  ) : activeTab === 'events' ? (
-                    // Event Filters
-                    <>
-                      {/* Event Type */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Event Type</label>
-                        <div className="space-y-2">
-                          {['music', 'sports', 'arts', 'tech', 'food', 'networking', 'social', 'educational'].map(type => (
-                            <label key={type} className="flex items-center space-x-3">
-                              <input
-                                type="checkbox"
-                                checked={filters.eventTypes.includes(type)}
-                                onChange={(e) => {
-                                  const newTypes = e.target.checked 
-                                    ? [...filters.eventTypes, type]
-                                    : filters.eventTypes.filter(t => t !== type);
-                                  handleFiltersChange({ eventTypes: newTypes });
-                                }}
-                                className="w-4 h-4 text-primary border-subtle-bg rounded focus:ring-primary"
-                              />
-                              <span className="text-sm text-secondary capitalize">{type}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Date */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">When</label>
-                        <div className="space-y-2">
-                          {['today', 'tomorrow', 'weekend', 'this-week', 'next-week'].map(day => (
-                            <label key={day} className="flex items-center space-x-3">
-                              <input
-                                type="radio"
-                                name="day"
-                                checked={filters.day === day}
-                                onChange={() => handleFiltersChange({ day })}
-                                className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                              />
-                              <span className="text-sm text-secondary capitalize">{day.replace('-', ' ')}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Price */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Price</label>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === ''}
-                              onChange={() => handleFiltersChange({ price: '' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">All</span>
-                          </label>
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === 'free'}
-                              onChange={() => handleFiltersChange({ price: 'free' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">Free</span>
-                          </label>
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="radio"
-                              name="price"
-                              checked={filters.price === 'paid'}
-                              onChange={() => handleFiltersChange({ price: 'paid' })}
-                              className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                            />
-                            <span className="text-sm text-secondary">Paid</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Gender (for events that might be gender-specific) */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Audience</label>
-                        <div className="space-y-2">
-                          {['all', 'men', 'women', 'mixed'].map(gender => (
-                            <label key={gender} className="flex items-center space-x-3">
-                              <input
-                                type="radio"
-                                name="gender"
-                                checked={filters.day === gender} // Reusing day filter for simplicity
-                                onChange={() => handleFiltersChange({ day: gender })}
-                                className="w-4 h-4 text-primary border-subtle-bg focus:ring-primary"
-                              />
-                              <span className="text-sm text-secondary capitalize">{gender}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Specific Date */}
-                      <div>
-                        <label className="block text-sm font-semibold text-primary mb-3">Specific Date</label>
-                        <input
-                          type="date"
-                          value={filters.date}
-                          onChange={(e) => handleFiltersChange({ date: e.target.value })}
-                          className="w-full rounded-tile border border-subtle-bg bg-white px-4 py-3 text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      </div>
-                    </>
-                  ) : null}
+                {/* Activity Type */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Activity Type</label>
+                  <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                    {activityTypes.map(type => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => {
+                          const newTypes = filters.eventTypes.includes(type.id)
+                            ? filters.eventTypes.filter(t => t !== type.id)
+                            : [...filters.eventTypes, type.id];
+                          handleFiltersChange({ eventTypes: newTypes });
+                        }}
+                        className={`flex flex-col items-center p-2 rounded-lg border transition-all ${
+                          filters.eventTypes.includes(type.id)
+                            ? 'border-[#67295F] bg-[#67295F]/10 text-[#67295F]'
+                            : 'border-[#F2F2F2] bg-white text-[#1A1A1A] hover:border-[#67295F]/50'
+                        }`}
+                      >
+                        <span className="text-lg mb-1">{type.icon}</span>
+                        <span className="text-xs font-medium leading-tight">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Filter Actions */}
-                <div className="border-t border-subtle-bg p-4 space-y-3">
-                  <button
-                    onClick={() => {
-                      setFilters({
-                        eventTypes: [],
-                        day: '',
-                        date: '',
-                        price: '',
-                      });
-                    }}
-                    className="w-full tile-action-row text-sm font-medium text-secondary"
-                  >
-                    Clear All Filters
-                  </button>
-                  <button
-                    onClick={() => setFilterDrawerOpen(false)}
-                    className="w-full tile-action-active text-sm font-medium"
-                  >
-                    Apply Filters
-                  </button>
+                {/* Location Input */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Location</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={filterLocationInput}
+                      onChange={(e) => handleFilterLocationSearch(e.target.value)}
+                      onKeyDown={handleFilterLocationKeyDown}
+                      placeholder="Search for a location..."
+                      className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F]"
+                    />
+                    
+                    {/* Suggestions Dropdown */}
+                    {filterLocationSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-[#F2F2F2] rounded-lg shadow-subtle max-h-32 overflow-y-auto">
+                        {filterLocationSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => selectFilterLocation(suggestion)}
+                            className="w-full px-4 py-2 text-left text-sm text-[#1A1A1A] hover:bg-[#F2F2F2] transition-colors"
+                          >
+                            📍 {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Selected Location Buttons */}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {filterLocations.map(location => (
+                      <button
+                        key={location}
+                        type="button"
+                        onClick={() => removeFilterLocation(location)}
+                        className="bg-[#F2F2F2] rounded-full px-3 py-1 text-xs font-medium text-[#1A1A1A] hover:bg-[#67295F]/10 transition-colors group"
+                      >
+                        {location}
+                        <span className="ml-1 text-[#717171] group-hover:text-[#67295F]">×</span>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  {/* Quick Select Buttons */}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {['Seasons Mall', 'FC Road', 'Phoenix Marketcity', 'Koregaon Park'].map(location => (
+                      <button
+                        key={location}
+                        type="button"
+                        onClick={() => selectFilterLocation(location)}
+                        disabled={filterLocations.includes(location)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          filterLocations.includes(location)
+                            ? 'bg-[#67295F]/10 text-[#67295F] cursor-not-allowed'
+                            : 'bg-[#F2F2F2] text-[#1A1A1A] hover:bg-[#67295F]/10'
+                        }`}
+                      >
+                        {filterLocations.includes(location) ? '✓ ' : ''}{location}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+
+                {/* Date */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Date</label>
+                  <input
+                    type="datetime-local"
+                    value={filters.date}
+                    onChange={(e) => handleFiltersChange({ date: e.target.value })}
+                    className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+                  />
+                </div>
+
+                {/* Guests Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Guests</label>
+                  <select 
+                    value={filters.guests || ''}
+                    onChange={(e) => handleFiltersChange({ guests: e.target.value })}
+                    className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+                  >
+                    <option value="">Select guest count</option>
+                    {guestOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Age Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Age Range</label>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[#717171]">18</span>
+                        <span className="text-xs text-[#717171]">100</span>
+                      </div>
+                      <div className="relative h-8">
+                        {/* Track */}
+                        <div className="absolute top-3 left-0 right-0 h-2 bg-[#F2F2F2] rounded-full"></div>
+                        {/* Filled track */}
+                        <div 
+                          className="absolute top-3 h-2 bg-[#67295F] rounded-full"
+                          style={{
+                            left: `${((parseInt(filters.ageMin || '25') - 18) / 82) * 100}%`,
+                            right: `${100 - ((parseInt(filters.ageMax || '75') - 18) / 82) * 100}%`
+                          }}
+                        ></div>
+                        {/* Min handle */}
+                        <input
+                          type="range"
+                          min="18"
+                          max="95"
+                          value={filters.ageMin || '25'}
+                          onChange={(e) => {
+                            const newMin = parseInt(e.target.value);
+                            const currentMax = parseInt(filters.ageMax || '75');
+                            // Ensure at least 5-year gap
+                            if (newMin <= currentMax - 5) {
+                              handleFiltersChange({ ageMin: newMin.toString() });
+                            }
+                          }}
+                          className="absolute top-2 w-4 h-4 bg-[#67295F] rounded-full appearance-none cursor-pointer border-2 border-white shadow-md"
+                          style={{
+                            left: `${((parseInt(filters.ageMin || '25') - 18) / 82) * 100}%`,
+                            transform: 'translateX(-50%)'
+                          }}
+                        />
+                        {/* Max handle */}
+                        <input
+                          type="range"
+                          min="23"
+                          max="100"
+                          value={filters.ageMax || '75'}
+                          onChange={(e) => {
+                            const newMax = parseInt(e.target.value);
+                            const currentMin = parseInt(filters.ageMin || '25');
+                            // Ensure at least 5-year gap
+                            if (newMax >= currentMin + 5) {
+                              handleFiltersChange({ ageMax: newMax.toString() });
+                            }
+                          }}
+                          className="absolute top-2 w-4 h-4 bg-[#67295F] rounded-full appearance-none cursor-pointer border-2 border-white shadow-md"
+                          style={{
+                            left: `${((parseInt(filters.ageMax || '75') - 18) / 82) * 100}%`,
+                            transform: 'translateX(-50%)'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-sm font-medium text-[#1A1A1A]">
+                        {filters.ageMin || '25'} - {filters.ageMax || '75'} years
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Distance Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Distance</label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-[#717171]">1 km</span>
+                      <input
+                        type="range"
+                        min="1"
+                        max="50"
+                        value={filters.distance || '25'}
+                        onChange={(e) => handleFiltersChange({ distance: e.target.value })}
+                        className="flex-1 h-2 bg-[#F2F2F2] rounded-lg appearance-none cursor-pointer"
+                        style={{
+                          background: `linear-gradient(to right, #67295F 0%, #67295F ${((parseInt(filters.distance || '25') - 1) / 49) * 100}%, #F2F2F2 ${((parseInt(filters.distance || '25') - 1) / 49) * 100}%, #F2F2F2 100%)`
+                        }}
+                      />
+                      <span className="text-xs text-[#717171]">50 km</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-sm font-medium text-[#1A1A1A]">{filters.distance || '25'} km</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Gender Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Gender</label>
+                  <select 
+                    value={filters.gender || ''}
+                    onChange={(e) => handleFiltersChange({ gender: e.target.value })}
+                    className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+                  >
+                    <option value="">Select gender</option>
+                    {genderOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Fees Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Fees</label>
+                  <select 
+                    value={filters.fees || ''}
+                    onChange={(e) => handleFiltersChange({ fees: e.target.value })}
+                    className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+                  >
+                    <option value="">Select fee type</option>
+                    {feeOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                      {/* Action Buttons */}
+                      <div className="border-t border-[#F2F2F2] p-4 space-y-3 mt-6">
+                        <button
+                          onClick={() => {
+                            setFilters({
+                              eventTypes: [],
+                              date: '',
+                              fees: '',
+                              guests: '',
+                              gender: '',
+                              ageMin: '',
+                              ageMax: '',
+                              distance: '',
+                            });
+                          }}
+                          className="w-full py-3 px-6 bg-transparent border border-[#67295F] text-[#67295F] rounded-lg font-medium hover:bg-[#67295F]/10 transition-opacity"
+                        >
+                          Clear All Filters
+                        </button>
+                        <button
+                          onClick={() => setFilterDrawerOpen(false)}
+                          className="w-full py-3 px-6 bg-[#67295F] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+                        >
+                          Apply Filters
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
       <AnimatePresence>
         {messageFor && (
           <MessageModal
@@ -710,6 +993,78 @@ export function ActivitySearchPage() {
         )}
       </AnimatePresence>
 
+      {/* Request Modal */}
+      <AnimatePresence>
+        {requestModal && (
+          <motion.div className="fixed inset-0 z-50 max-w-md mx-auto">
+            <motion.button
+              type="button"
+              aria-label="Close"
+              onClick={() => setRequestModal(null)}
+              className="absolute inset-0 bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 w-full max-w-sm bg-white border border-[#F2F2F2] rounded-lg p-6 shadow-lg mx-auto"
+            >
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">
+                  Send Request to {requestModal.companionName}
+                </h3>
+                <p className="text-sm text-[#717171] mb-4">
+                  Write a short message (min 10 characters)
+                </p>
+                
+                <textarea
+                  value={requestMessage}
+                  onChange={(e) => setRequestMessage(e.target.value.slice(0, 30))}
+                  placeholder="Hi! I'd like to join your activity..."
+                  className="w-full p-3 border border-[#F2F2F2] rounded-lg text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F] resize-none"
+                  rows={3}
+                  maxLength={30}
+                />
+                
+                <div className="flex justify-between items-center mt-2 mb-4">
+                  <span className="text-xs text-[#717171]">
+                    {requestMessage.length}/30 characters
+                  </span>
+                  <span className={`text-xs ${requestMessage.length >= 10 ? 'text-[#67295F]' : 'text-[#717171]'}`}>
+                    {requestMessage.length >= 10 ? '✓ Ready to send' : `Need ${10 - requestMessage.length} more`}
+                  </span>
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setRequestModal(null)}
+                    className="flex-1 py-2 px-4 bg-transparent border border-[#67295F] text-[#67295F] rounded-lg text-sm font-medium hover:bg-[#67295F]/10 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={sendRequest}
+                    disabled={requestMessage.length < 10}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                      requestMessage.length >= 10
+                        ? 'bg-[#67295F] text-white hover:opacity-90'
+                        : 'bg-[#F2F2F2] text-[#717171] cursor-not-allowed'
+                    }`}
+                  >
+                    Send Request
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {reportModal.open && (
           <ReportModal
@@ -719,6 +1074,96 @@ export function ActivitySearchPage() {
             itemId={reportModal.itemId}
             itemName={reportModal.itemName}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Commit Modal */}
+      <AnimatePresence>
+        {commitModal && commitModal.open && (
+          <motion.div className="fixed inset-0 z-50 max-w-md mx-auto">
+            <motion.button
+              type="button"
+              aria-label="Close"
+              onClick={() => setCommitModal(null)}
+              className="absolute inset-0 bg-black/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-4 flex items-center justify-center"
+            >
+              <div className="w-full max-w-sm bg-white border border-[#F2F2F2] rounded-lg p-6 shadow-lg">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-[#67295F]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="h-8 w-8 text-[#67295F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">
+                    Commit to Activity
+                  </h3>
+                
+                <div className="text-sm text-[#717171] mb-4">
+                  <div className="mb-2">
+                    <strong>Activity:</strong> {commitModal.activityName}
+                  </div>
+                  <div className="mb-2">
+                    <strong>Companion:</strong> {commitModal.companionName}
+                  </div>
+                </div>
+
+                {/* Timing and Date Information */}
+                <div className="bg-[#F2F2F2] rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-semibold text-[#1A1A1A] mb-3">📅 Scheduled Details</h4>
+                  <div className="space-y-2 text-sm text-[#717171]">
+                    <div className="flex justify-between">
+                      <span>Date:</span>
+                      <span className="font-medium text-[#1A1A1A]">February 15, 2026</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Time:</span>
+                      <span className="font-medium text-[#1A1A1A]">6:00 PM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Status:</span>
+                      <span className="font-medium text-green-600">Confirmed by Companion</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-[#717171] mb-6">
+                  This timing has been set by the companion. You'll receive a confirmation message with further details.
+                </div>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCommitModal(null)}
+                    className="flex-1 py-2 px-4 bg-transparent border border-[#67295F] text-[#67295F] rounded-lg text-sm font-medium hover:bg-[#67295F]/10 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCommitModal(null);
+                      // Navigate to chat or show success message
+                      console.log('Activity committed!');
+                    }}
+                    className="flex-1 py-2 px-4 bg-[#67295F] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    Confirm Commit
+                  </button>
+                </div>
+              </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

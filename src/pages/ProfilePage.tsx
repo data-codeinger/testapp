@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { companions } from "../data/mock";
 import { useAppState } from "../state/AppState";
 import { OverlayModal } from "../ui/OverlayModal";
+import { VerifiedBadge } from "../components/VerifiedBadge";
 
 export function ProfilePage() {
   const { activities, bookedActivityIds, joinRequests, activeBookings, updateActivity, acceptRequest, declineRequest } =
@@ -14,6 +15,7 @@ export function ProfilePage() {
   const [editTitle, setEditTitle] = useState("");
   const [editPlan, setEditPlan] = useState("");
   const [editLocation, setEditLocation] = useState("");
+  const [isSelfieVerified] = useState(true); // Mock state - in real app this would come from backend
 
   const currentUser = {
     name: "You",
@@ -49,10 +51,7 @@ export function ProfilePage() {
           <div className="text-lg font-semibold text-zinc-900">
             {currentUser.name}
           </div>
-          <div className="bg-subtle-bg inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold text-primary">
-            <span>✓</span>
-            <span>Verified</span>
-          </div>
+          {isSelfieVerified && <VerifiedBadge size="large" showOutline={true} />}
         </div>
         <div className="mt-1 text-xs text-zinc-600">{currentUser.city}</div>
       </div>

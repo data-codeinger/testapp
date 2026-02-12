@@ -15,56 +15,59 @@ body {
 
 body {
   margin: 0;
-  background: #F8F9FB; /* cool-toned off-white canvas */
+  background: #FFFFFF; /* Pure white background */
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* High-Elevation White Tile System - Physical Object Design */
+/* Minimalist Hinge-Style Design System */
 @layer components {
-  /* Floating Tiles with Diffuse Glow */
-  .tile-standard {
-    @apply bg-white shadow-diffuse-glow rounded-tile p-6 transition-all duration-200 hover:scale-[1.02];
+  /* Clean white sections with subtle borders */
+  .section-block {
+    @apply bg-white border-b border-[#F2F2F2] p-6;
   }
 
-  /* Bottom Navigation - Higher Elevation */
-  .tile-bottom-nav {
-    @apply bg-white shadow-bottom-nav rounded-tile p-4;
+  /* Bottom Navigation - Solid white bar */
+  .nav-bar {
+    @apply bg-white border-t border-[#F2F2F2] px-4 py-2;
   }
 
-  /* Tab Bar - Long White Pill */
-  .tile-tab-bar {
-    @apply bg-white shadow-diffuse-glow rounded-tile p-2;
+  /* Tab Bar - Clean white with subtle border */
+  .tab-bar {
+    @apply bg-white border-b border-[#F2F2F2] p-2;
   }
 
-  /* Action Rows - Recessed Background */
-  .tile-action-row {
-    @apply bg-white rounded-tile p-4;
+  /* Action Buttons - Minimalist design */
+  .btn-primary {
+    @apply bg-[#1A1A1A] text-white px-6 py-3 rounded-lg font-medium transition-opacity duration-200 hover:opacity-90;
   }
 
-  /* Active Action - Deep Charcoal */
-  .tile-action-active {
-    @apply bg-primary text-white rounded-tile p-4;
+  .btn-secondary {
+    @apply bg-transparent border border-[#1A1A1A] text-[#1A1A1A] px-6 py-3 rounded-lg font-medium transition-opacity duration-200 hover:opacity-90;
   }
 
-  /* Modal Overlay - Solid Grey Tint */
-  .solid-overlay {
-    background: rgba(0, 0, 0, 0.15);
+  /* Accent color for active states */
+  .accent-active {
+    @apply text-[#67295F];
   }
 
-  /* Subtle Background Blocks */
-  .subtle-section {
-    @apply bg-subtle-bg rounded-tile p-6;
+  .accent-bg {
+    @apply bg-[#67295F];
+  }
+
+  /* Subtle section dividers */
+  .section-divider {
+    @apply border-b border-[#F2F2F2];
   }
 }
 
-  /* Typography utilities - Premium color system */
+  /* Typography utilities - Hinge-style color system */
   .text-headline {
-    @apply font-semibold text-primary;
+    @apply font-semibold text-[#1A1A1A];
   }
 
   .text-body {
-    @apply font-medium text-primary;
+    @apply font-medium text-[#1A1A1A];
   }
 
   .text-secondary {
@@ -72,5 +75,62 @@ body {
   }
 
   .text-caption {
-    @apply text-sm text-secondary;
+    @apply text-sm text-[#717171];
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
+
+  /* Information chips - simple text with icons */
+  .info-chip {
+    @apply flex items-center gap-2 text-sm text-[#1A1A1A];
+  }
+
+  /* Location chips - subtle gray outlines */
+  .location-chip {
+    @apply inline-flex items-center px-3 py-1 text-xs font-medium text-[#1A1A1A] border border-[#F2F2F2] rounded-full;
+  }
+
+  /* Tile components for existing design system */
+  .tile-standard {
+    @apply bg-white border border-[#F2F2F2] rounded-tile p-4 shadow-subtle;
+  }
+
+  .tile-tab-bar {
+    @apply bg-white border border-[#F2F2F2] rounded-tile p-1 flex gap-1;
+  }
+
+  .tile-action-active {
+    @apply bg-[#67295F] text-white px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  }
+
+  .tile-action-row {
+    @apply bg-transparent border border-[#F2F2F2] text-[#1A1A1A] px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:bg-[#F2F2F2];
+  }
+
+  .tile-floating {
+    @apply bg-white/80 backdrop-blur-[20px] border border-white/20 shadow-subtle;
+  }
+
+  /* Hinge-style menu row */
+  .menu-row {
+    @apply w-full bg-white border-b border-[#F2F2F2] px-4 py-4 flex items-center justify-between transition-all duration-200 hover:bg-[rgba(103,41,95,0.05)] active:bg-[rgba(103,41,95,0.1)];
+  }
+
+  .menu-row-icon {
+    @apply text-[#1A1A1A] w-5 h-5;
+  }
+
+  .menu-row-label {
+    @apply flex-1 text-left font-semibold text-[#1A1A1A] mx-4;
+  }
+
+  .menu-row-chevron {
+    @apply text-[#717171] w-4 h-4;
   }

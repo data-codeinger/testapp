@@ -4,7 +4,182 @@ import { CreateModal } from "../features/create/CreateModal";
 import { ReportModal } from "../features/report/ReportModal";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Mock posts data from all users
+// Custom hook for time formatting
+const useTimeAgo = (timestamp: string) => {
+  const getTimeAgo = () => {
+    const now = new Date();
+    const postTime = new Date(timestamp);
+    const diffMs = now.getTime() - postTime.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffHours < 1) return 'Just Now';
+    if (diffHours < 24) return `${diffHours} Hours Ago`;
+    if (diffDays < 7) return `${diffDays} Days Ago`;
+    return postTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  return getTimeAgo();
+};
+
+// Immersive Gallery Component with Double Tap to Like
+const ImmersiveGallery = ({ photos, isLiked, onDoubleTap }: {
+  photos: string[];
+  isLiked: boolean;
+  onDoubleTap: () => void;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showHeart, setShowHeart] = useState(false);
+  
+  const nextPhoto = () => {
+    setCurrentIndex((prev) => (prev + 1) % photos.length);
+  };
+  
+  const prevPhoto = () => {
+    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
+  
+  const handleDoubleClick = () => {
+    onDoubleTap();
+    setShowHeart(true);
+    setTimeout(() => setShowHeart(false), 1000);
+  };
+  
+  if (photos.length === 0) return null;
+  
+  return (
+    <div className="relative group" onDoubleClick={handleDoubleClick}>
+      <div className="relative overflow-hidden rounded-[12px]" style={{ aspectRatio: '4/5' }}>
+        <img
+          src={photos[currentIndex]}
+          alt={`Activity photo ${currentIndex + 1}`}
+          className="w-full h-full object-cover"
+        />
+        
+        {/* Navigation arrows - only show if multiple photos */}
+        {photos.length > 1 && (
+          <>
+            <button
+              onClick={prevPhoto}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/60 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={nextPhoto}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/60 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <svg className="w-4 h-4 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
+        
+        {/* Timestamp overlay */}
+        <div className="absolute bottom-3 right-3 text-white text-xs font-medium opacity-60">
+          {useTimeAgo(photos[currentIndex])}
+        </div>
+        
+        {/* Double tap heart animation */}
+        {showHeart && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <svg className="w-24 h-24 text-white animate-ping" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </div>
+        )}
+      </div>
+      
+      {/* Dot indicators */}
+      {photos.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {photos.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className={`transition-all duration-300 ${
+                index === currentIndex 
+                  ? 'w-6 h-1.5 bg-white' 
+                  : 'w-1.5 h-1.5 bg-white/40'
+              } rounded-full`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Journal Text Component
+const JournalText = ({ description }: { description: string }) => {
+  const showFullText = description.length <= 150;
+  
+  return (
+    <div className="mt-6">
+      <p className={`italic text-[#1A1A1A] leading-relaxed text-base ${
+        showFullText ? '' : 'line-clamp-3'
+      }`}>
+        {description}
+      </p>
+    </div>
+  );
+};
+
+// Sober Interaction Row Component
+const SoberInteractionRow = ({ likes, comments, isLiked, onLike, onComment }: {
+  likes: number;
+  comments: number;
+  isLiked: boolean;
+  onLike: () => void;
+  onComment: () => void;
+}) => {
+  return (
+    <div className="flex items-center gap-8 mt-6">
+      <button
+        onClick={onLike}
+        className="flex items-center gap-2 group transition-all duration-300"
+      >
+        <svg 
+          className={`w-4 h-4 transition-all duration-300 ${
+            isLiked 
+              ? 'fill-[#67295F] stroke-[#67295F]' 
+              : 'stroke-[#717171] group-hover:stroke-[#67295F]'
+          }`} 
+          fill="none" 
+          strokeWidth="0.5" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        </svg>
+        <span className={`text-sm font-light tracking-wide ${
+          isLiked ? 'text-[#67295F]' : 'text-[#717171]'
+        }`}>
+          {likes} Likes
+        </span>
+      </button>
+      
+      <button
+        onClick={onComment}
+        className="flex items-center gap-2 group transition-all duration-300"
+      >
+        <svg 
+          className="w-4 h-4 stroke-[#717171] group-hover:stroke-[#67295F] transition-all duration-300" 
+          fill="none" 
+          strokeWidth="0.5" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <span className="text-sm font-light tracking-wide text-[#717171]">
+          {comments} Comments
+        </span>
+      </button>
+    </div>
+  );
+};
 const mockPosts = [
   {
     id: "p1",
@@ -130,184 +305,78 @@ export function PostsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 pb-24 pt-6">
+    <div className="mx-auto w-full max-w-md px-6 pb-24 pt-8">
       {/* Header */}
-      <div className="mb-6">
-        <div className="text-xl text-headline">
-          Community Posts
+      <div className="mb-12">
+        <div className="text-3xl font-light text-[#1A1A1A] tracking-wider">
+          Moments
         </div>
-        <div className="mt-1 text-caption">
-          Discover what others are sharing
+        <div className="mt-2 text-sm text-[#717171] font-light tracking-wide">
+          Editorial stories from completed activities
         </div>
       </div>
 
-      {/* Posts Content - One Post Per Page */}
-      <div className="mt-5 pb-8 space-y-6">
+      {/* Magazine Editorial Feed */}
+      <div className="space-y-10">
         {posts.map((post, index) => (
-          <motion.div
+          <motion.article
             key={post.id}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1, ease: "easeOut" }}
+            transition={{ duration: 0.6, delay: index * 0.15, ease: "easeOut" }}
+            className=""
           >
-              <div className="tile-standard">
-                {/* Author Header */}
-                <div className="tile-standard">
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => nav(`/companion/${post.companionId}`)}
-                      className="flex-shrink-0"
-                    >
-                      <div className="w-12 h-12 overflow-hidden rounded-full">
-                        <img
-                          src={post.authorAvatar}
-                          alt={post.authorName}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    </button>
-                    <div className="flex-1">
-                      <div className="text-base text-headline font-semibold">
-                        {post.authorName}
-                      </div>
-                      <div className="text-xs text-secondary">
-                        {new Date(post.timestamp).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                      <div className="text-xs text-secondary mt-1">
-                        📍 {post.activity}
-                      </div>
+            {/* High-End Header */}
+            <div className="mb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => nav(`/companion/${post.companionId}`)}
+                    className="flex-shrink-0"
+                  >
+                    <div className="w-10 h-10 overflow-hidden rounded-full">
+                      <img
+                        src={post.authorAvatar}
+                        alt={post.authorName}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
-                  </div>
-                </div>
-                
-                {/* Description */}
-                <p className="text-body leading-relaxed mb-4 text-base">{post.description}</p>
-                
-                {/* Photo Grid - Multiple Photos */}
-                {post.photos.length > 0 && (
-                  <div className="mb-4">
-                    {post.photos.length === 1 ? (
-                      <div className="overflow-hidden rounded-tile">
-                        <img
-                          src={post.photos[0]}
-                          alt="Post photo"
-                          className="w-full h-64 object-cover"
-                        />
-                      </div>
-                    ) : post.photos.length === 2 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {post.photos.map((photo, photoIndex) => (
-                          <div key={photoIndex} className="overflow-hidden rounded-tile">
-                            <img
-                              src={photo}
-                              alt={`Post photo ${photoIndex + 1}`}
-                              className="w-full h-48 object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="overflow-hidden rounded-tile col-span-2">
-                          <img
-                            src={post.photos[0]}
-                            alt="Post photo 1"
-                            className="w-full h-64 object-cover"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {post.photos.slice(1, 3).map((photo, photoIndex) => (
-                            <div key={photoIndex} className="overflow-hidden rounded-tile">
-                              <img
-                                src={photo}
-                                alt={`Post photo ${photoIndex + 2}`}
-                                className="w-full h-32 object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        {post.photos.length > 3 && (
-                          <div className="relative overflow-hidden rounded-tile">
-                            <img
-                              src={post.photos[3]}
-                              alt="Post photo 4"
-                              className="w-full h-32 object-cover"
-                            />
-                            {post.photos.length > 4 && (
-                              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                <span className="text-white font-semibold">
-                                  +{post.photos.length - 4} more
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Interaction Bar */}
-                <div className="tile-action-row">
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-6">
-                      <button
-                        type="button"
-                        onClick={() => handleLike(post.id)}
-                        className={`flex items-center gap-2 text-sm transition-all duration-200 ${
-                          post.isLiked ? 'text-red-500' : 'text-secondary hover:text-red-500'
-                        }`}
-                      >
-                        <span className="text-xl">{post.isLiked ? '❤️' : '🤍'}</span>
-                        <span className="font-medium">{post.likes}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleComment(post.id)}
-                        className="flex items-center gap-2 text-sm text-secondary hover:text-primary transition-all duration-200"
-                      >
-                        <span className="text-xl">💬</span>
-                        <span className="font-medium">{post.comments}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleShare(post.id)}
-                        className="flex items-center gap-2 text-sm text-secondary hover:text-primary transition-all duration-200"
-                      >
-                        <span className="text-xl">📤</span>
-                        <span className="font-medium">Share</span>
-                      </button>
+                  </button>
+                  <div>
+                    <div className="font-serif text-[#1A1A1A] text-lg font-semibold">
+                      {post.authorName}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleReport(post.id, post.description)}
-                      className="text-xs text-secondary hover:text-red-500 transition-all duration-200"
-                    >
-                      Report
-                    </button>
+                    <div className="text-xs text-[#717171] uppercase tracking-[3px] font-light mt-1">
+                      {post.activity}
+                    </div>
                   </div>
                 </div>
               </div>
-            </motion.div>
-          ))}
+            </div>
+            
+            {/* Immersive Gallery */}
+            <ImmersiveGallery
+              photos={post.photos}
+              isLiked={post.isLiked}
+              onDoubleTap={() => handleLike(post.id)}
+            />
+            
+            {/* Journal Text */}
+            <JournalText description={post.description} />
+            
+            {/* Sober Interaction Row */}
+            <SoberInteractionRow
+              likes={post.likes}
+              comments={post.comments}
+              isLiked={post.isLiked}
+              onLike={() => handleLike(post.id)}
+              onComment={() => handleComment(post.id)}
+            />
+          </motion.article>
+        ))}
       </div>
 
-      {/* Floating Action Button - Create Post */}
-      <div className="tile-floating fixed bottom-6 right-6">
-        <button
-          onClick={() => setCreateModalOpen(true)}
-          className="w-14 h-14 bg-primary text-white rounded-full shadow-floating-bar hover:shadow-high-modal transition-all duration-200 hover:scale-110 flex items-center justify-center"
-        >
-          <span className="text-2xl font-medium">+</span>
-        </button>
-      </div>
 
       {/* Comment Modal */}
       <AnimatePresence>
@@ -411,6 +480,17 @@ export function PostsPage() {
         onClose={() => setCreateModalOpen(false)}
         type="post"
       />
+
+      {/* Floating Create Button */}
+      <button
+        onClick={() => setCreateModalOpen(true)}
+        className="fixed bottom-24 right-6 w-14 h-14 bg-[#67295F] text-white rounded-full shadow-lg shadow-[#67295F]/50 flex items-center justify-center hover:scale-110 transition-transform duration-200 z-30"
+        aria-label="Create Post"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
     </div>
   );
 }

@@ -1,13 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppState } from "../state/AppState";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProfilePreviewScreen } from "../components/ProfilePreviewScreen";
 import { MyPostsScreen } from "../components/MyPostsScreen";
-import { ConnectionsScreen } from "../components/ConnectionsScreen";
 import { SavedProfilesScreen } from "../components/SavedProfilesScreen";
+import { RateActivitiesScreen } from "../components/RateActivitiesScreen";
 import { MyPlanReferralsScreen } from "../components/MyPlanReferralsScreen";
 import { AccountManagementScreen } from "../components/AccountManagementScreen";
-import { EditProfileScreen } from "../components/EditProfileScreen";
+import { MasterProfileEditor } from "../components/MasterProfileEditor";
+import { DiscoveryPreferencesScreen } from "../components/DiscoveryPreferencesScreen";
+import { BlockContactsScreen } from "../components/BlockContactsScreen";
+import { WeMetFeedbackScreen } from "../components/WeMetFeedbackScreen";
+import { ReportHistoryScreen } from "../components/ReportHistoryScreen";
+import { SafetyPrivacyScreen } from "../components/SafetyPrivacyScreen";
+import { HelpFeedbackScreen } from "../components/HelpFeedbackScreen";
 import { VerifiedBadge } from "../components/VerifiedBadge";
 
 // Mock data
@@ -41,7 +48,8 @@ const mockConnections = [
 
 export function ProfileSettingsPage() {
   const { connectionRequests, connections } = useAppState();
-  const [currentScreen, setCurrentScreen] = useState<'main' | 'profile-preview' | 'my-posts' | 'connections' | 'saved-profiles' | 'my-plan-referrals' | 'account-management' | 'edit-profile'>('main');
+  const navigate = useNavigate();
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'profile-preview' | 'my-posts' | 'saved-activities' | 'rate-activities' | 'my-plan-referrals' | 'account-management' | 'edit-profile' | 'discovery-preferences' | 'block-contacts' | 'we-met-feedback' | 'report-history' | 'safety-privacy' | 'help-feedback'>('main');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -68,19 +76,31 @@ export function ProfileSettingsPage() {
         return <ProfilePreviewScreen onBack={goBack} />;
       case 'my-posts':
         return <MyPostsScreen onBack={goBack} />;
-      case 'connections':
-        return <ConnectionsScreen onBack={goBack} />;
-      case 'saved-profiles':
+      case 'rate-activities':
+        return <RateActivitiesScreen onBack={goBack} />;
+      case 'saved-activities':
         return <SavedProfilesScreen onBack={goBack} />;
       case 'my-plan-referrals':
         return <MyPlanReferralsScreen onBack={goBack} />;
       case 'account-management':
         return <AccountManagementScreen onBack={goBack} />;
       case 'edit-profile':
-        return <EditProfileScreen onBack={goBack} onSave={(profileData) => {
+        return <MasterProfileEditor onBack={goBack} onSave={(profileData) => {
           console.log("Profile saved:", profileData);
           setCurrentScreen('main');
         }} />;
+      case 'discovery-preferences':
+        return <DiscoveryPreferencesScreen onBack={goBack} />;
+      case 'block-contacts':
+        return <BlockContactsScreen onBack={goBack} />;
+      case 'we-met-feedback':
+        return <WeMetFeedbackScreen onBack={goBack} connectionName="Sarah Chen" />;
+      case 'report-history':
+        return <ReportHistoryScreen onBack={goBack} />;
+      case 'safety-privacy':
+        return <SafetyPrivacyScreen onBack={goBack} onNavigateToReportHistory={() => setCurrentScreen('report-history')} />;
+      case 'help-feedback':
+        return <HelpFeedbackScreen onBack={goBack} />;
       default:
         return null;
     }
@@ -157,6 +177,27 @@ export function ProfileSettingsPage() {
           </button>
         </motion.div>
 
+        {/* Emergency Buttons */}
+        <div className="bg-[#FFFFFF] px-4 py-3">
+          <div className="flex gap-3">
+            {/* Emergency Contacts - Ghost Button */}
+            <button
+              onClick={() => setCurrentScreen('safety-privacy')}
+              className="flex-1 py-3 border border-[#67295F] text-[#67295F] rounded-lg font-medium hover:bg-[#67295F] hover:text-white transition-colors"
+            >
+              Emergency Contacts
+            </button>
+            
+            {/* SOS Call - Solid Button */}
+            <button
+              onClick={() => setShowEmergencyModal(true)}
+              className="flex-1 py-3 bg-[#67295F] text-white rounded-lg font-medium hover:bg-[#5A1F4F] transition-colors"
+            >
+              SOS Call
+            </button>
+          </div>
+        </div>
+
         {/* Main Menu Rows */}
         <div className="bg-[#FFFFFF]">
           {/* My Posts Row */}
@@ -173,25 +214,18 @@ export function ProfileSettingsPage() {
             </svg>
           </button>
 
-          {/* Connections Row */}
+          {/* My Activities Row */}
           <button
-            onClick={() => navigateToScreen('connections')}
+            onClick={() => navigate('/my-activities')}
             className="menu-row"
           >
             <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="menu-row-label">Connections</span>
-            <div className="flex items-center gap-2">
-              {connectionRequests.length > 0 && (
-                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {connectionRequests.length}
-                </span>
-              )}
-              <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
+            <span className="menu-row-label">My Activities</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
 
           {/* Discovery Preferences Row */}
@@ -210,13 +244,32 @@ export function ProfileSettingsPage() {
 
           {/* Saved Items Row */}
           <button
-            onClick={() => navigateToScreen('saved-profiles')}
+            onClick={() => navigateToScreen('saved-activities')}
             className="menu-row"
           >
             <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            <span className="menu-row-label">Saved Profiles</span>
+            <span className="menu-row-label">Saved Activities</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Rate Activities Row */}
+          <button
+            onClick={() => navigateToScreen('rate-activities')}
+            className="menu-row"
+          >
+            <div className="relative">
+              <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 01-.69.928l-2.855 2.855a1 1 0 01-1.414 0l-2.855-2.855a1 1 0 01-.69-.928L9.05 2.927c.299-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 01-.69.928l-1.519 1.519a1 1 0 01-1.414 0l-1.519-1.519a1 1 0 01-.69-.928L6.948 6.855c-.299-.921 1.603-.921 1.902 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 01-.69.928l-2.855 2.855a1 1 0 01-1.414 0l-2.855-2.855a1 1 0 01-.69-.928L9.05 2.927c.299-.921 1.603-.921 1.902 0z" />
+              </svg>
+              {/* Purple notification badge */}
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#67295F] rounded-full"></div>
+            </div>
+            <span className="menu-row-label font-bold">Rate Activities</span>
             <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -232,6 +285,76 @@ export function ProfileSettingsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12c0 4.478 4.064 7 9.542 7-4.477 0-8.268-2.943-9-5.542z" />
             </svg>
             <span className="menu-row-label">View Profile as Others See It</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Discovery Preferences Row */}
+          <button
+            onClick={() => navigateToScreen('discovery-preferences')}
+            className="menu-row"
+          >
+            <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            <span className="menu-row-label">Discovery & Preferences</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Block Contacts Row */}
+          <button
+            onClick={() => navigateToScreen('block-contacts')}
+            className="menu-row"
+          >
+            <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            <span className="menu-row-label">Block Contacts</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* We Met Row */}
+          <button
+            onClick={() => navigateToScreen('we-met-feedback')}
+            className="menu-row"
+          >
+            <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span className="menu-row-label">We Met</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Safety & Privacy Row */}
+          <button
+            onClick={() => navigateToScreen('safety-privacy')}
+            className="menu-row"
+          >
+            <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span className="menu-row-label">Safety & Privacy</span>
+            <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Help & Feedback Row */}
+          <button
+            onClick={() => navigateToScreen('help-feedback')}
+            className="menu-row"
+          >
+            <svg className="menu-row-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="menu-row-label">Help & Feedback</span>
             <svg className="menu-row-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

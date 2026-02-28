@@ -11,6 +11,7 @@ export function AccountManagementScreen({ onBack }: AccountManagementScreenProps
   const [deactivateReason, setDeactivateReason] = useState("");
   const [deleteReason, setDeleteReason] = useState("");
   const [deleteFeedback, setDeleteFeedback] = useState("");
+  const [isPaused, setIsPaused] = useState(false);
 
   const deactivateReasons = [
     "Taking a break from dating",
@@ -124,6 +125,22 @@ export function AccountManagementScreen({ onBack }: AccountManagementScreenProps
               </div>
               <button className="relative inline-flex h-6 w-11 items-center rounded-full bg-[#F2F2F2] transition-colors">
                 <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
+              </button>
+            </div>
+            <div className="flex items-center justify-between border-t border-[#F2F2F2] pt-4">
+              <div>
+                <h3 className="font-semibold text-[#1A1A1A] text-sm">Pause My Account</h3>
+                <p className="text-xs text-[#717171]">Hidden from Discovery but can chat with existing connections</p>
+              </div>
+              <button 
+                onClick={() => setIsPaused(!isPaused)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isPaused ? 'bg-[#67295F]' : 'bg-[#F2F2F2]'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isPaused ? 'translate-x-6' : 'translate-x-1'
+                }`} />
               </button>
             </div>
           </div>

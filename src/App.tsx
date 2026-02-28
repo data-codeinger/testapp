@@ -10,6 +10,10 @@ import { ActivityFeedPage } from "./pages/ActivityFeedPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { PostsPage } from "./pages/PostsPage";
 import { ProfileSettingsPage } from "./pages/ProfileSettingsPage";
+import { MyActivitiesPage } from "./pages/MyActivitiesPage";
+import { CreateActivityPage } from "./pages/CreateActivityPage";
+import { CreateModal } from "./features/create/CreateModal";
+import { EditActivityScreen } from "./components/EditActivityScreen";
 
 const IPhone17ProFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -59,9 +63,12 @@ export default function App() {
                 <Route path="/posts" element={<PostsPage />} />
                 <Route path="/chats" element={<ChatListPage />} />
                 <Route path="/profile-settings" element={<ProfileSettingsPage />} />
+                <Route path="/my-activities" element={<MyActivitiesPage />} />
               </Route>
               <Route path="/chats/:id" element={<ChatScreen />} />
               <Route path="/companion/:id" element={<CompanionProfilePage />} />
+              <Route path="/create-activity" element={<CreateActivityPage />} />
+              <Route path="/edit-activity" element={<EditActivityScreen onBack={() => window.history.back()} />} />
               <Route path="*" element={<Navigate to="/activity" replace />} />
             </Routes>
           </div>

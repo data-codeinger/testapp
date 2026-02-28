@@ -20,7 +20,7 @@ body {
     Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* Minimalist Hinge-Style Design System */
+/* Clean Design System */
 @layer components {
   /* Clean white sections with subtle borders */
   .section-block {
@@ -61,7 +61,7 @@ body {
   }
 }
 
-  /* Typography utilities - Hinge-style color system */
+  /* Typography utilities - Clean color system */
   .text-headline {
     @apply font-semibold text-[#1A1A1A];
   }
@@ -85,6 +85,14 @@ body {
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;  /* Safari and Chrome */
+  }
+
+  /* Line clamp utility for text truncation */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* Information chips - simple text with icons */
@@ -118,7 +126,7 @@ body {
     @apply bg-white/80 backdrop-blur-[20px] border border-white/20 shadow-subtle;
   }
 
-  /* Hinge-style menu row */
+  /* Clean menu row */
   .menu-row {
     @apply w-full bg-white border-b border-[#F2F2F2] px-4 py-4 flex items-center justify-between transition-all duration-200 hover:bg-[rgba(103,41,95,0.05)] active:bg-[rgba(103,41,95,0.1)];
   }

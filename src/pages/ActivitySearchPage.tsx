@@ -5,7 +5,7 @@ import { CreateModal } from "../features/create/CreateModal";
 import { ReportModal } from "../features/report/ReportModal";
 import { useAppState } from "../state/AppState";
 import { motion, AnimatePresence } from "framer-motion";
-import { VerifiedBadge } from "../components/VerifiedBadge";
+import { ActivityCard } from "../components/ActivityCard";
 
 // Mock events data
 const mockEvents = [
@@ -72,43 +72,9 @@ function LocationChip({ name }: { name: string }) {
   );
 }
 
-// Activity type icons mapping
-const activityTypeIcons: Record<string, string> = {
-  'breakfast': '🍳',
-  'brunch': '🥞',
-  'dinner': '🍽️',
-  'coffee': '☕',
-  'cafe': '🏪',
-  'picnic': '🧺',
-  'book': '📚',
-  'movie': '🎬',
-  'live-music': '🎵',
-  'art': '🎨',
-  'party': '🎉',
-  'concert': '🎤',
-  'standup': '🎭',
-  'outdoor': '🏕️',
-  'nature': '🌲',
-  'volunteer': '🤝',
-  'health': '💪',
-  'shopping': '🛍️',
-  'wandering': '🚶',
-  'bike-riding': '🚴',
-  'default': '📍'
-};
-
-const getActivityIcon = (activityName: string) => {
-  const name = activityName.toLowerCase();
-  for (const [type, icon] of Object.entries(activityTypeIcons)) {
-    if (name.includes(type) || name.includes(type.replace('-', ''))) {
-      return icon;
-    }
-  }
-  return activityTypeIcons.default;
-};
 
 export function ActivitySearchPage() {
-  const { activities, bookedActivityIds, sendConnectionRequest } = useAppState();
+  const { activities, bookedActivityIds, sendConnectionRequest, shortlistedActivities, toggleShortlist } = useAppState();
   const nav = useNavigate();
   const [messageFor, setMessageFor] = useState<null | { id: string; name: string; companionName: string }>(
     null,
@@ -118,13 +84,14 @@ export function ActivitySearchPage() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState<string | null>(null);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
-  const [showEventMenu, setShowEventMenu] = useState<string | null>(null);
   const [requestModal, setRequestModal] = useState<{ open: boolean; companionId: string; companionName: string } | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
   const [filterLocations, setFilterLocations] = useState<string[]>([]);
   const [filterLocationInput, setFilterLocationInput] = useState('');
   const [filterLocationSuggestions, setFilterLocationSuggestions] = useState<string[]>([]);
   const [commitModal, setCommitModal] = useState<{ open: boolean; activityId: string; activityName: string; companionName: string } | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Activity types (same as CreateModal)
   const activityTypes = [
@@ -209,7 +176,6 @@ export function ActivitySearchPage() {
       selectFilterLocation(filterLocationInput.trim());
     }
   };
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [reportModal, setReportModal] = useState<{ open: boolean; type: "activity" | "event" | "companion" | "post"; itemId: string; itemName?: string }>({
     open: false,
     type: "activity",
@@ -263,6 +229,14 @@ export function ActivitySearchPage() {
   const handleReportActivity = (id: string, name: string) => {
     setReportModal({ open: true, type: "activity", itemId: id, itemName: name });
     setShowReportMenu(null);
+  };
+
+  const handleToggleShortlist = (activityId: string, activityName: string) => {
+    toggleShortlist(activityId);
+    const isShortlisted = shortlistedActivities.includes(activityId);
+    setToastMessage(isShortlisted ? 'Activity removed from your Shortlist' : 'Activity saved to your Shortlist');
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   const handleFiltersChange = (newFilters: Partial<FilterState>) => {
@@ -367,209 +341,16 @@ export function ActivitySearchPage() {
                 </div>
               ) : (
                 filteredActivities.map((activity) => (
-                  <motion.div
+                  <ActivityCard
                     key={activity.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {/* Polaroid-style Activity Card - Initially Collapsed */}
-                    <div className="bg-white border-b border-[#F2F2F2]">
-                      {/* Large Photo at Top - Clickable for Profile */}
-                      <div className="w-full aspect-square overflow-hidden relative">
-                        <div 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            nav(`/companion/${activity.companionId}`);
-                          }}
-                          className="cursor-pointer w-full h-full"
-                        >
-                          <img
-                            src={activity.companionAvatarUrl}
-                            alt={activity.companionName}
-                            className="w-full h-full object-cover hover:opacity-90 transition-opacity"
-                          />
-                          {/* Polaroid-style white border at bottom */}
-                          <div className="absolute bottom-0 left-0 right-0 h-12 bg-white"></div>
-                        </div>
-                      </div>
-                      
-                      {/* Companion Info */}
-                      <div className="px-4 pt-1 pb-4 bg-white">
-                        <div className="flex items-center gap-1">
-                          <p className="text-xl font-bold text-[#1A1A1A]">
-                            {activity.companionName}
-                          </p>
-                          <VerifiedBadge size="small" />
-                        </div>
-                      </div>
-
-                      {/* Clickable Area for Activity Info - Below Name */}
-                      <div 
-                        onClick={() => setExpandedCard(expandedCard === activity.id ? null : activity.id)}
-                        className="cursor-pointer bg-white border-b border-[#F2F2F2] px-4 pb-4 relative"
-                      >
-                        {/* Activity Type Icon + Name */}
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-lg">{getActivityIcon(activity.activityName)}</span>
-                          <span className="font-semibold text-[#1A1A1A]">{activity.activityName}</span>
-                        </div>
-                        
-                        {/* Date */}
-                        {activity.date && (
-                          <div className="flex items-center gap-2 text-[#717171] text-sm mb-2">
-                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span>{activity.date}</span>
-                          </div>
-                        )}
-                        
-                        {/* Location */}
-                        {activity.locations.length > 0 && (
-                          <div className="flex items-center gap-2 text-[#717171] text-sm">
-                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span>{activity.locations[0]}</span>
-                            {activity.locations[1] && <span> · {activity.locations[1]}</span>}
-                          </div>
-                        )}
-                        
-                        {/* Fees/Price */}
-                        {activity.paidBy && (
-                          <div className="flex items-center gap-2 text-[#717171] text-sm mt-2">
-                            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>{activity.paidBy}</span>
-                          </div>
-                        )}
-
-                        {/* Dropdown Arrow Indicator */}
-                        <div className="absolute bottom-2 right-4">
-                          <svg 
-                            className={`h-4 w-4 text-[#717171] transition-transform duration-300 ${
-                              expandedCard === activity.id ? 'rotate-180' : ''
-                            }`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Expanded Content - Only shows when clicked */}
-                      {expandedCard === activity.id && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.3 }}
-                          className="border-t border-[#F2F2F2] overflow-hidden"
-                        >
-                          <div className="p-6">
-                            {/* Age Range */}
-                            <div className="mb-4">
-                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">👥 Age Range</div>
-                              <div className="text-sm text-[#717171]">
-                                25-35 years
-                              </div>
-                            </div>
-
-                            {/* Group Size */}
-                            <div className="mb-4">
-                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">👥 Group Size</div>
-                              <div className="text-sm text-[#717171]">
-                                2-4 people
-                              </div>
-                            </div>
-
-                            {/* Intention */}
-                            {activity.intention && (
-                              <div className="mb-6">
-                                <div className="text-sm font-semibold text-[#1A1A1A] mb-2">🎯 Intention</div>
-                                <div className="flex flex-wrap gap-2">
-                                  {Array.isArray(activity.intention) ? activity.intention.map((tag: string) => (
-                                    <span key={tag} className="bg-[#67295F]/10 text-[#67295F] px-3 py-1 rounded-full text-xs font-medium">
-                                      {tag}
-                                    </span>
-                                  )) : (
-                                    <span className="bg-[#67295F]/10 text-[#67295F] px-3 py-1 rounded-full text-xs font-medium">
-                                      {activity.intention}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Location Chips */}
-                            {activity.locations.length > 0 && (
-                              <div className="mb-4">
-                                <div className="text-sm font-semibold text-[#1A1A1A] mb-2">📍 Locations</div>
-                                <div className="flex flex-wrap gap-2">
-                                  {activity.locations.map((location: string) => (
-                                    <a
-                                      key={location}
-                                      href={`https://maps.google.com/?q=${encodeURIComponent(location)}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center px-3 py-1 text-xs font-medium text-[#1A1A1A] border border-[#F2F2F2] rounded-full hover:bg-[#F2F2F2] transition-colors"
-                                    >
-                                      📍 {location}
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* The Plan */}
-                            <div className="mb-6">
-                              <div className="text-sm font-semibold text-[#1A1A1A] mb-2">The Plan</div>
-                              <div className="text-sm text-[#717171] leading-relaxed">
-                                {activity.description}
-                                {activity.description.length < 200 && (
-                                  <>
-                                    <br /><br />
-                                    This is an extended description to provide more details about the activity. 
-                                    We'll explore various aspects of this experience together, ensuring everyone 
-                                    has a great time and feels comfortable throughout the journey. 
-                                    The activity is designed to be inclusive and enjoyable for all participants.
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2 mt-6">
-                              <button
-                                onClick={() => handleRequest(activity.companionId, activity.companionName)}
-                                className="flex-1 py-2 px-3 bg-[#67295F] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                              >
-                                Request
-                              </button>
-                              <button
-                                onClick={() => handleMessage(activity)}
-                                className="flex-1 py-2 px-3 bg-[#67295F] text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-                              >
-                                Message
-                              </button>
-                              <button
-                                onClick={() => handleCommit(activity.id, activity.activityName, activity.companionName)}
-                                className="flex-1 py-2 px-3 bg-transparent border border-[#67295F] text-[#67295F] rounded-lg text-sm font-medium hover:bg-[#67295F]/10 transition-all shadow-lg shadow-[#67295F]/30 hover:shadow-[#67295F]/50"
-                              >
-                                Commit
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
+                    activity={activity}
+                    mode="discover"
+                    onToggleShortlist={handleToggleShortlist}
+                    isShortlisted={shortlistedActivities.includes(activity.id)}
+                    onRequest={handleRequest}
+                    onMessage={handleMessage}
+                    onCommit={handleCommit}
+                  />
                 ))
               )}
             </motion.div>
@@ -657,6 +438,40 @@ export function ActivitySearchPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-md"
+          >
+            <div className="bg-[#1A1A1A] text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between gap-4">
+              <span className="text-sm font-medium">{toastMessage}</span>
+              <button
+                onClick={() => setShowToast(false)}
+                className="text-white/80 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <button
+                onClick={() => {
+                  setShowToast(false);
+                  nav('/profile-settings');
+                }}
+                className="text-sm text-white/80 hover:text-white underline transition-colors"
+              >
+                View Shortlist
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Filter Drawer */}
       <AnimatePresence>

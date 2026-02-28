@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppState } from "../state/AppState";
 import { ReportModal } from "../features/report/ReportModal";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Mock call history data
 const mockCallHistory = [
@@ -38,9 +39,9 @@ const mockCallHistory = [
 ];
 
 export function ChatListPage() {
-  const { chatThreads } = useAppState();
+  const { chatThreads, blockChatThread, connectionRequests, acceptConnectionRequest, declineConnectionRequest } = useAppState();
   const nav = useNavigate();
-  const [activeTab, setActiveTab] = useState<'messages' | 'calls'>('messages');
+  const [activeTab, setActiveTab] = useState<'messages' | 'calls' | 'requests'>('messages');
   const [q, setQ] = useState("");
   const [showChatMenu, setShowChatMenu] = useState<string | null>(null);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
@@ -70,8 +71,10 @@ export function ChatListPage() {
 
   const handleBlock = (chatId: string, companionName: string) => {
     console.log("Block companion:", companionName);
+    blockChatThread(chatId);
     setShowChatMenu(null);
-    // TODO: Implement block functionality
+    setSelectedChat(null);
+    setShowTopMenu(false);
   };
 
   const handleUnfollow = (chatId: string, companionName: string) => {
@@ -136,18 +139,26 @@ export function ChatListPage() {
     // TODO: Implement delete call history functionality
   };
 
+  const handleAcceptRequest = (requestId: string) => {
+    acceptConnectionRequest(requestId);
+  };
+
+  const handleDeclineRequest = (requestId: string) => {
+    declineConnectionRequest(requestId);
+  };
+
   return (
     <div className="min-h-screen bg-canvas">
       <div className="mx-auto w-full max-w-md px-4 pt-6 pb-4">
         {/* header */}
         <div className="mb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-xl text-headline">
-                {activeTab === 'messages' ? 'Messages' : 'Calls'}
+                Communication Hub
               </div>
               <div className="mt-1 text-caption">
-                {activeTab === 'messages' ? 'Chat with your companions' : 'Call history'}
+                Manage your connections and conversations
               </div>
             </div>
             
@@ -177,30 +188,40 @@ export function ChatListPage() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Tab Switcher */}
-        <div className="tile-floating flex mb-4 p-1 rounded-tile">
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'messages'
-                ? 'bg-primary text-white shadow-glass'
-                : 'text-body hover:text-headline'
-            }`}
-          >
-            Messages
-          </button>
-          <button
-            onClick={() => setActiveTab('calls')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'calls'
-                ? 'bg-primary text-white shadow-glass'
-                : 'text-body hover:text-headline'
-            }`}
-          >
-            Calls
-          </button>
+          {/* Three-Tab Navigation - High-Density Pill Toggle */}
+          <div className="flex gap-1 p-1 rounded-full" style={{ background: 'rgba(0, 0, 0, 0.05)' }}>
+            {(['messages', 'calls', 'requests'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                  activeTab === tab
+                    ? "text-black shadow-lg"
+                    : "text-gray-600 hover:text-black"
+                }`}
+                style={{
+                  fontFamily: 'Helvetica, Arial, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  background: activeTab === tab ? 'rgba(255, 255, 255, 0.8)' : 'transparent',
+                  backdropFilter: activeTab === tab ? 'blur(20px)' : 'none',
+                }}
+              >
+                <span className="capitalize">{tab}</span>
+                {tab === 'messages' && chatThreads.length > 0 && (
+                  <span className="bg-gray-800 text-white text-xs px-2 py-0.5 rounded-full">
+                    {chatThreads.length}
+                  </span>
+                )}
+                {tab === 'requests' && connectionRequests.length > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {connectionRequests.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* search */}
@@ -210,150 +231,30 @@ export function ChatListPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={activeTab === 'messages' ? 'Search messages...' : 'Search calls...'}
+              placeholder={
+                activeTab === 'messages' ? 'Search messages...' : 
+                activeTab === 'calls' ? 'Search calls...' : 
+                'Search requests...'
+              }
               className="flex-1 bg-transparent text-sm text-body placeholder:text-zinc-500 outline-none"
             />
           </div>
         </div>
+        </div>
 
-        {/* Top Menu Bar - Shows when chat is selected */}
-        {activeTab === 'messages' && selectedChat && (
-          <div className="mt-4 relative">
-            {/* 3 dots menu - completely outside */}
-            <div className="absolute -top-2 -right-2 z-20">
-              <div className="relative">
-                <button
-                  onClick={() => setShowTopMenu(!showTopMenu)}
-                  className="p-2 bg-white rounded-full shadow-lg border border-zinc-200 hover:bg-zinc-50 transition-colors"
-                >
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <circle cx="8" cy="3" r="1.5"/>
-                    <circle cx="8" cy="8" r="1.5"/>
-                    <circle cx="8" cy="13" r="1.5"/>
-                  </svg>
-                </button>
-                {showTopMenu && (
-                  <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-30 min-w-[140px]">
-                    <button
-                      onClick={() => handleTopMenuAction('block')}
-                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      Block
-                    </button>
-                    <button
-                      onClick={() => handleTopMenuAction('unfollow')}
-                      className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-                    >
-                      Unfollow
-                    </button>
-                    <button
-                      onClick={() => handleTopMenuAction('report')}
-                      className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-                    >
-                      Report
-                    </button>
-                    <button
-                      onClick={() => handleTopMenuAction('delete')}
-                      className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      Delete Chat
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Selection card */}
-            <div className="tile-standard rounded-tile p-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-zinc-600">Selected:</span>
-                <span className="text-sm font-semibold text-headline">
-                  {filteredMessages.find(t => t.id === selectedChat)?.companionName}
-                </span>
-              </div>
-              
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={clearSelection}
-                  className="text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* content */}
+        {/* content */}
       <div className="mx-auto w-full max-w-md px-4 pb-8">
-        {activeTab === 'messages' ? (
-          // Messages List
-          <div className="tile-floating overflow-hidden rounded-tile">
-            {filteredMessages.map((t, idx) => (
-              <div
-                key={t.id}
-                className={`flex w-full items-center gap-3 px-4 py-3.5 bg-white border-b border-subtle-bg last:border-b-0 relative ${
-                  selectedChat === t.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''
-                }`}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  handleForceClick(t.id, t.companionName);
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => nav(`/chats/${t.id}`)}
-                  className="flex items-center gap-3 flex-1"
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleForceClick(t.id, t.companionName);
-                  }}
-                >
-                  {/* left: avatar + live */}
-                  <div className="relative">
-                    <div className="h-11 w-11 overflow-hidden rounded-full border border-subtle-bg">
-                      <img
-                        src={t.companionAvatarUrl}
-                        alt={t.companionName}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    {t.isLive && (
-                      <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border border-white bg-emerald-500 shadow-glass" />
-                    )}
-                  </div>
-
-                  {/* center */}
-                  <div className="min-w-0 flex-1 text-left">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="truncate text-sm font-semibold text-headline">
-                        {t.companionName}
-                      </div>
-                      <div className="text-[11px] text-caption">
-                        {t.lastMessageTime}
-                      </div>
-                    </div>
-                    <div className="mt-0.5 truncate text-xs text-body">
-                      {t.lastMessagePreview}
-                    </div>
-                  </div>
-
-                  {/* right: unread */}
-                  {t.unreadCount > 0 && (
-                    <div className="ml-2 grid min-h-[22px] min-w-[22px] place-items-center rounded-full bg-primary px-2 text-[11px] font-semibold text-white">
-                      {t.unreadCount}
-                    </div>
-                  )}
-                </button>
-
-                {/* Individual 3 dots menu (hidden when top menu is active) */}
-                {!selectedChat && (
+        {activeTab === 'messages' && (
+          <>
+            {/* Top Menu Bar - Shows when chat is selected */}
+            {selectedChat && (
+              <div className="mt-4 relative">
+                {/* 3 dots menu - completely outside */}
+                <div className="absolute -top-2 -right-2 z-20">
                   <div className="relative">
                     <button
-                      onClick={() => setShowChatMenu(showChatMenu === t.id ? null : t.id)}
-                      className="p-1 hover:bg-zinc-100 rounded-full transition-colors"
+                      onClick={() => setShowTopMenu(!showTopMenu)}
+                      className="p-2 bg-white rounded-full shadow-lg border border-zinc-200 hover:bg-zinc-50 transition-colors"
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                         <circle cx="8" cy="3" r="1.5"/>
@@ -361,28 +262,29 @@ export function ChatListPage() {
                         <circle cx="8" cy="13" r="1.5"/>
                       </svg>
                     </button>
-                    {showChatMenu === t.id && (
-                      <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-10 min-w-[140px]">
+                    {showTopMenu && (
+                      <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-30 min-w-[140px]">
                         <button
-                          onClick={() => handleBlock(t.id, t.companionName)}
-                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          onClick={() => handleTopMenuAction('block')}
+                          className="w-full px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                          style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '16px', color: '#FF3B30' }}
                         >
                           Block
                         </button>
                         <button
-                          onClick={() => handleUnfollow(t.id, t.companionName)}
+                          onClick={() => handleTopMenuAction('unfollow')}
                           className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
                         >
                           Unfollow
                         </button>
                         <button
-                          onClick={() => handleReport(t.id, t.companionName)}
+                          onClick={() => handleTopMenuAction('report')}
                           className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
                         >
                           Report
                         </button>
                         <button
-                          onClick={() => handleDeleteChat(t.id, t.companionName)}
+                          onClick={() => handleTopMenuAction('delete')}
                           className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                           Delete Chat
@@ -390,11 +292,148 @@ export function ChatListPage() {
                       </div>
                     )}
                   </div>
-                )}
+                </div>
+
+                {/* Selection card */}
+                <div className="tile-standard rounded-tile p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-600">Selected:</span>
+                    <span className="text-sm font-semibold text-headline">
+                      {filteredMessages.find(t => t.id === selectedChat)?.companionName}
+                    </span>
+                  </div>
+                  
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={clearSelection}
+                      className="text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
+            )}
+
+            {/* Messages List - Frosted Glass styling */}
+            <div className="space-y-2">
+              {filteredMessages.map((t, idx) => (
+                <div
+                  key={t.id}
+                  className={`relative ${
+                    selectedChat === t.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''
+                  }`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    handleForceClick(t.id, t.companionName);
+                  }}
+                >
+                  <div
+                    className="w-full px-4 py-3 rounded-2xl backdrop-blur-xl border border-white/20 shadow-lg"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      backdropFilter: 'blur(20px)',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => nav(`/chats/${t.id}`)}
+                      className="flex items-center gap-3 flex-1 w-full"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleForceClick(t.id, t.companionName);
+                      }}
+                    >
+                      {/* left: avatar + live */}
+                      <div className="relative">
+                        <div className="h-12 w-12 overflow-hidden rounded-full border border-white/30 shadow-md">
+                          <img
+                            src={t.companionAvatarUrl}
+                            alt={t.companionName}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        {t.isLive && (
+                          <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border border-white bg-emerald-500 shadow-glass" />
+                        )}
+                      </div>
+
+                      {/* center */}
+                      <div className="min-w-0 flex-1 text-left">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="truncate font-bold" style={{ fontSize: '20px', fontFamily: 'Helvetica, Arial, sans-serif' }}>
+                            {t.companionName}
+                          </div>
+                          <div className="text-xs" style={{ color: '#666', fontFamily: 'Helvetica, Arial, sans-serif' }}>
+                            {t.lastMessageTime}
+                          </div>
+                        </div>
+                        <div className="mt-1 truncate" style={{ fontSize: '14px', fontFamily: 'Helvetica, Arial, sans-serif', color: '#666' }}>
+                          {t.lastMessagePreview}
+                        </div>
+                      </div>
+
+                      {/* right: unread */}
+                      {t.unreadCount > 0 && (
+                        <div className="ml-2 grid min-h-[22px] min-w-[22px] place-items-center rounded-full bg-primary px-2 text-[11px] font-semibold text-white">
+                          {t.unreadCount}
+                        </div>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Individual 3 dots menu (hidden when top menu is active) */}
+                  {!selectedChat && (
+                    <div className="absolute top-2 right-2">
+                      <button
+                        onClick={() => setShowChatMenu(showChatMenu === t.id ? null : t.id)}
+                        className="p-1.5 bg-white/50 backdrop-blur-sm rounded-full hover:bg-white/70 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <circle cx="8" cy="3" r="1.5"/>
+                          <circle cx="8" cy="8" r="1.5"/>
+                          <circle cx="8" cy="13" r="1.5"/>
+                        </svg>
+                      </button>
+                      {showChatMenu === t.id && (
+                        <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-10 min-w-[140px]">
+                          <button
+                            onClick={() => handleBlock(t.id, t.companionName)}
+                            className="w-full px-3 py-2 text-left text-sm font-bold text-red-600 hover:bg-red-50 transition-colors"
+                            style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '16px' }}
+                          >
+                            Block
+                          </button>
+                          <button
+                            onClick={() => handleUnfollow(t.id, t.companionName)}
+                            className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          >
+                            Unfollow
+                          </button>
+                          <button
+                            onClick={() => handleReport(t.id, t.companionName)}
+                            className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                          >
+                            Report
+                          </button>
+                          <button
+                            onClick={() => handleDeleteChat(t.id, t.companionName)}
+                            className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            Delete Chat
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {activeTab === 'calls' && (
           // Calls List
           <div className="tile-floating overflow-hidden rounded-tile">
             {filteredCalls.map((call) => (
@@ -453,6 +492,140 @@ export function ChatListPage() {
                 </button>
               </button>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'requests' && (
+          // Requests View - Application Cards
+          <div className="space-y-4">
+            <AnimatePresence>
+              {connectionRequests.map((request, index) => (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  exit={{ opacity: 0, x: -100, transition: { duration: 0.2 } }}
+                  className="w-full"
+                >
+                  <div
+                    className="w-full p-5 rounded-2xl"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      backdropFilter: 'blur(20px)',
+                      border: 'none',
+                    }}
+                  >
+                    {/* Identity: Avatar + Name & Age */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="h-14 w-14 overflow-hidden rounded-full">
+                        <img
+                          src={request.requesterAvatarUrl}
+                          alt={request.requesterName}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div 
+                          className="font-bold text-black"
+                          style={{ 
+                            fontFamily: 'Helvetica, Arial, sans-serif', 
+                            fontSize: '20px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {request.requesterName}
+                        </div>
+                        <div 
+                          className="text-gray-600"
+                          style={{ 
+                            fontFamily: 'Helvetica, Arial, sans-serif', 
+                            fontSize: '16px'
+                          }}
+                        >
+                          25 years old
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* The Prompt */}
+                    {request.message && (
+                      <div className="mb-6">
+                        <p 
+                          className="text-black"
+                          style={{ 
+                            fontFamily: 'Helvetica, Arial, sans-serif', 
+                            fontSize: '16px',
+                            lineHeight: '1.4',
+                            fontWeight: 'normal'
+                          }}
+                        >
+                          {request.message}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Actions - Bottom Right */}
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => handleDeclineRequest(request.id)}
+                        className="px-6 py-2 rounded-full border-0 transition-all hover:scale-105"
+                        style={{
+                          background: 'rgba(255, 59, 48, 0.1)',
+                        }}
+                      >
+                        <span 
+                          className="font-bold"
+                          style={{ 
+                            fontFamily: 'Helvetica, Arial, sans-serif', 
+                            fontSize: '16px',
+                            color: '#FF3B30',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Decline
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleAcceptRequest(request.id)}
+                        className="px-6 py-2 rounded-full backdrop-blur-sm border border-white/30 shadow-md transition-all hover:shadow-lg hover:scale-105"
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.8)',
+                          backdropFilter: 'blur(10px)',
+                        }}
+                      >
+                        <span 
+                          className="font-bold"
+                          style={{ 
+                            fontFamily: 'Helvetica, Arial, sans-serif', 
+                            fontSize: '16px',
+                            color: '#000',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          Accept
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Empty State for Requests */}
+            {connectionRequests.length === 0 && (
+              <div className="text-center py-12">
+                <p 
+                  className="text-gray-500"
+                  style={{ 
+                    fontFamily: 'Helvetica, Arial, sans-serif', 
+                    fontSize: '16px' 
+                  }}
+                >
+                  Your request queue is clear.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

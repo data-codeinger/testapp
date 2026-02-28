@@ -18,6 +18,7 @@ type AppState = {
   activities: Activity[];
   chatThreads: ChatThread[];
   bookedActivityIds: string[];
+  shortlistedActivities: string[];
   bookActivityForChat: (chatId: string, activityId: string) => void;
   updateActivity: (id: string, patch: Partial<Pick<Activity, "activityName" | "description" | "locations">>) => void;
   joinRequests: JoinRequest[];
@@ -30,6 +31,8 @@ type AppState = {
   acceptConnectionRequest: (requestId: string) => void;
   declineConnectionRequest: (requestId: string) => void;
   disconnectConnection: (connectionId: string) => void;
+  blockChatThread: (chatId: string) => void;
+  toggleShortlist: (activityId: string) => void;
 };
 
 const AppStateContext = createContext<AppState | undefined>(undefined);
@@ -45,6 +48,7 @@ export function useAppState() {
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [activities, setActivities] = useState<Activity[]>(seedActivities);
   const [bookedActivityIds, setBookedActivityIds] = useState<string[]>([]);
+  const [shortlistedActivities, setShortlistedActivities] = useState<string[]>([]);
   const [threads, setThreads] = useState<ChatThread[]>(seedThreads);
   const [joinRequests, setJoinRequests] =
     useState<JoinRequest[]>(initialJoinRequests);
@@ -166,15 +170,25 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     const request = connectionRequests.find((r) => r.id === requestId);
     if (!request) return;
     
-    const newConnection: Connection = {
-      id: `c-${Date.now()}`,
-      userId: request.requesterId,
-      userName: request.requesterName,
-      userAvatarUrl: request.requesterAvatarUrl,
-      connectedAt: new Date().toISOString(),
+    // Create a new chat thread instead of a connection
+    const newChatThread: ChatThread = {
+      id: `chat-${Date.now()}`,
+      companionId: request.requesterId,
+      companionName: request.requesterName,
+      companionAvatarUrl: request.requesterAvatarUrl,
+      lastMessagePreview: "Connection accepted! Start the conversation 🎉",
+      lastMessageTime: "Just now",
+      unreadCount: 0,
+      isLive: false,
+      messages: [{
+        id: `msg-${Date.now()}`,
+        from: "companion",
+        text: "Connection accepted! Start the conversation 🎉",
+        at: new Date().toISOString(),
+      }],
     };
     
-    setConnections((prev) => [...prev, newConnection]);
+    setThreads((prev) => [...prev, newChatThread]);
     setConnectionRequests((prev) => prev.filter((r) => r.id !== requestId));
   };
 
@@ -186,11 +200,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setConnections((prev) => prev.filter((c) => c.id !== connectionId));
   };
 
+  const blockChatThread: AppState["blockChatThread"] = (chatId) => {
+    setThreads((prev) => prev.filter((t) => t.id !== chatId));
+  };
+
+  const toggleShortlist: AppState["toggleShortlist"] = (activityId) => {
+    setShortlistedActivities((prev) =>
+      prev.includes(activityId)
+        ? prev.filter((id) => id !== activityId)
+        : [...prev, activityId]
+    );
+  };
+
   const value = useMemo<AppState>(
     () => ({
       activities,
       chatThreads: threads,
       bookedActivityIds,
+      shortlistedActivities,
       bookActivityForChat,
       updateActivity,
       joinRequests,
@@ -203,8 +230,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       acceptConnectionRequest,
       declineConnectionRequest,
       disconnectConnection,
+      blockChatThread,
+      toggleShortlist,
     }),
-    [activities, bookedActivityIds, threads, joinRequests, activeBookings, connectionRequests, connections],
+    [activities, bookedActivityIds, shortlistedActivities, threads, joinRequests, activeBookings, connectionRequests, connections],
   );
 
   return (

@@ -163,11 +163,15 @@ export const activities: Activity[] = [
       "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=256&q=80",
     locations: ["Seasons Mall", "Phoenix Marketcity"],
     description:
-      "Quick mall run: outfits + accessories. We’ll start with a coffee, then browse brands, and end with dessert. Flexible pace.",
+      "Quick mall run: outfits + accessories. We'll start with a coffee, then browse brands, and end with dessert. Flexible pace.",
     status: "live",
     date: "14 Feb 2026",
     intention: "friendship",
     paidBy: "me",
+    ageRange: {
+      min: 22,
+      max: 35
+    }
   },
   {
     id: "a2",
@@ -183,6 +187,29 @@ export const activities: Activity[] = [
     date: "14 Feb 2026",
     intention: "friendship",
     paidBy: "me",
+    ageRange: {
+      min: 25,
+      max: 40
+    }
+  },
+  {
+    id: "a3",
+    activityName: "Weekend Brunch",
+    companionId: "c3",
+    companionName: "Priya",
+    companionAvatarUrl:
+      "https://deepthee.in/cdn/shop/files/Kalyani_Genie_2.jpg?v=1752564617&width=4378",
+    locations: ["Café Peter", "Koregaon Park"],
+    description:
+      "Sunday brunch at my favorite spot. Great pancakes, even better conversation. Let's discuss our week ahead.",
+    status: "completed",
+    date: "10 Feb 2026", // Past date
+    intention: "friendship",
+    paidBy: "split-bill",
+    ageRange: {
+      min: 20,
+      max: 30
+    }
   },
 ];
 

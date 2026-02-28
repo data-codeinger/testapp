@@ -1,12 +1,23 @@
 import { useMemo, useState } from "react";
-
 import { useNavigate, useParams } from "react-router-dom";
-
 import { companions } from "../data/mock";
-
 import { ReportModal } from "../features/report/ReportModal";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { motion } from "framer-motion";
+// Types for like interactions
+type LikableElement = {
+  id: string;
+  type: 'photo' | 'prompt';
+  content: string;
+  thumbnailUrl?: string;
+};
+
+type LikeInteraction = {
+  elementId: string;
+  elementType: 'photo' | 'prompt';
+  comment?: string;
+  timestamp: string;
+};
 
 
 
@@ -50,24 +61,24 @@ export function CompanionProfilePage() {
 
   const [showEventMenu, setShowEventMenu] = useState<string | null>(null);
 
+  // Like interaction states
+  const [likedElements, setLikedElements] = useState<Set<string>>(new Set());
+  const [showLikeModal, setShowLikeModal] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<LikableElement | null>(null);
+  const [commentText, setCommentText] = useState('');
+  const [likeOnly, setLikeOnly] = useState(false);
+
   const [reportModal, setReportModal] = useState<{ open: boolean; type: "activity" | "event" | "companion" | "post"; itemId: string; itemName?: string }>({
-
     open: false,
-
     type: "companion",
-
     itemId: ""
-
   });
 
   
 
   const companion = useMemo(
-
     () => companions.find((c) => c.id === id) ?? companions[0],
-
     [id],
-
   );
 
   
@@ -75,6 +86,60 @@ export function CompanionProfilePage() {
   const prompts = mockPrompts[id as keyof typeof mockPrompts] || mockPrompts["c1"];
 
 
+
+  // Haptic feedback helper
+  const triggerHapticFeedback = () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50); // Light vibration for 50ms
+    }
+  };
+
+  // Handle like interaction
+  const handleLikeInteraction = (element: LikableElement) => {
+    setSelectedElement(element);
+    setShowLikeModal(true);
+    setCommentText('');
+    setLikeOnly(false);
+  };
+
+  // Handle modal like only
+  const handleLikeOnly = () => {
+    setLikeOnly(!likeOnly);
+  };
+
+  // Send like with optional comment
+  const handleSendLike = () => {
+    if (!selectedElement) return;
+    
+    // Add to liked elements
+    setLikedElements(prev => new Set([...prev, selectedElement.id]));
+    
+    // Trigger haptic feedback
+    triggerHapticFeedback();
+    
+    // Close modal
+    setShowLikeModal(false);
+    setSelectedElement(null);
+    setCommentText('');
+    setLikeOnly(false);
+    
+    // TODO: Send to backend
+    console.log('Like sent:', {
+      elementId: selectedElement.id,
+      elementType: selectedElement.type,
+      comment: commentText,
+      likeOnly,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setShowLikeModal(false);
+    setSelectedElement(null);
+    setCommentText('');
+    setLikeOnly(false);
+  };
 
   const handleReport = () => {
 
@@ -416,16 +481,35 @@ export function CompanionProfilePage() {
 
             >
 
-              <div className="tile-standard">
-
+              <div className="tile-standard relative">
                 <div className="flex items-start gap-3">
-
                   <div className="text-2xl">✨</div>
-
-                  <p className="text-body italic leading-relaxed">{prompts.prompt1}</p>
-
+                  <div className="flex-1">
+                    <p className="text-body italic leading-relaxed">{prompts.prompt1}</p>
+                  </div>
+                  {/* Like button */}
+                  <button
+                    onClick={() => handleLikeInteraction({
+                      id: 'prompt1',
+                      type: 'prompt',
+                      content: prompts.prompt1
+                    })}
+                    className="absolute bottom-3 right-3 p-1.5 rounded-full bg-white/80 backdrop-blur-sm transition-all duration-200 hover:bg-white/90"
+                  >
+                    <svg 
+                      className={`w-4 h-4 transition-colors duration-200 ${
+                        likedElements.has('prompt1')
+                          ? 'fill-[#67295F] stroke-[#67295F]'
+                          : 'stroke-[#CCCCCC]'
+                      }`}
+                      fill="none" 
+                      strokeWidth="1" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                  </button>
                 </div>
-
               </div>
 
             </motion.div>
@@ -435,29 +519,41 @@ export function CompanionProfilePage() {
             {/* Photo 1 */}
 
             <motion.div
-
               initial={{ opacity: 0, scale: 0.95 }}
-
               animate={{ opacity: 1, scale: 1 }}
-
               transition={{ duration: 0.3, delay: 0.4 }}
-
+              className="relative"
             >
-
-              <div className="overflow-hidden rounded-tile">
-
+              <div className="overflow-hidden rounded-tile relative">
                 <img
-
                   src={companion.avatarUrl}
-
                   alt={`${companion.name} - Photo 1`}
-
                   className="w-full h-64 object-cover"
-
                 />
-
+                {/* Like button */}
+                <button
+                  onClick={() => handleLikeInteraction({
+                    id: 'photo1',
+                    type: 'photo',
+                    content: 'Profile photo',
+                    thumbnailUrl: companion.avatarUrl
+                  })}
+                  className="absolute bottom-3 right-3 p-1.5 rounded-full bg-white/80 backdrop-blur-sm transition-all duration-200 hover:bg-white/90"
+                >
+                  <svg 
+                    className={`w-4 h-4 transition-colors duration-200 ${
+                      likedElements.has('photo1')
+                        ? 'fill-[#67295F] stroke-[#67295F]'
+                        : 'stroke-[#CCCCCC]'
+                    }`}
+                    fill="none" 
+                    strokeWidth="1" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                  </svg>
+                </button>
               </div>
-
             </motion.div>
 
 
@@ -465,62 +561,89 @@ export function CompanionProfilePage() {
             {/* Second Prompt */}
 
             <motion.div
-
               initial={{ opacity: 0, y: 20 }}
-
               animate={{ opacity: 1, y: 0 }}
-
               transition={{ duration: 0.3, delay: 0.5 }}
-
             >
 
-              <div className="tile-standard">
-
+              <div className="tile-standard relative">
                 <div className="flex items-start gap-3">
-
                   <div className="text-2xl">💭</div>
-
-                  <p className="text-body italic leading-relaxed">{prompts.prompt2}</p>
-
+                  <div className="flex-1">
+                    <p className="text-body italic leading-relaxed">{prompts.prompt2}</p>
+                  </div>
+                  {/* Like button */}
+                  <button
+                    onClick={() => handleLikeInteraction({
+                      id: 'prompt2',
+                      type: 'prompt',
+                      content: prompts.prompt2
+                    })}
+                    className="absolute bottom-3 right-3 p-1.5 rounded-full bg-white/80 backdrop-blur-sm transition-all duration-200 hover:bg-white/90"
+                  >
+                    <svg 
+                      className={`w-4 h-4 transition-colors duration-200 ${
+                        likedElements.has('prompt2')
+                          ? 'fill-[#67295F] stroke-[#67295F]'
+                          : 'stroke-[#CCCCCC]'
+                      }`}
+                      fill="none" 
+                      strokeWidth="1" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                  </button>
                 </div>
-
               </div>
 
             </motion.div>
 
 
-
             {/* Photos 2/3 Grid */}
 
             <motion.div
-
               initial={{ opacity: 0, y: 20 }}
-
               animate={{ opacity: 1, y: 0 }}
-
               transition={{ duration: 0.3, delay: 0.6 }}
-
             >
 
               <div className="grid grid-cols-2 gap-3">
-
-                {companion.posts.slice(0, 2).map((post, index) => (
-
-                  <div key={post.id} className="overflow-hidden rounded-tile">
-
-                    <img
-
-                      src={post.imageUrl}
-
-                      alt={`${companion.name} - Photo ${index + 2}`}
-
-                      className="w-full h-32 object-cover"
-
-                    />
-
-                  </div>
-
-                ))}
+                {companion.posts.slice(0, 2).map((post, index) => {
+                  const photoId = `photo${index + 2}`;
+                  return (
+                    <div key={post.id} className="overflow-hidden rounded-tile relative">
+                      <img
+                        src={post.imageUrl}
+                        alt={`${companion.name} - Photo ${index + 2}`}
+                        className="w-full h-32 object-cover"
+                      />
+                      {/* Like button */}
+                      <button
+                        onClick={() => handleLikeInteraction({
+                          id: photoId,
+                          type: 'photo',
+                          content: post.caption || `Photo ${index + 2}`,
+                          thumbnailUrl: post.imageUrl
+                        })}
+                        className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 backdrop-blur-sm transition-all duration-200 hover:bg-white/90"
+                      >
+                        <svg 
+                          className={`w-4 h-4 transition-colors duration-200 ${
+                            likedElements.has(photoId)
+                              ? 'fill-[#67295F] stroke-[#67295F]'
+                              : 'stroke-[#CCCCCC]'
+                          }`}
+                          fill="none" 
+                          strokeWidth="1" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
 
               </div>
 
@@ -531,15 +654,10 @@ export function CompanionProfilePage() {
             {/* Additional Info */}
 
             <motion.div
-
               initial={{ opacity: 0, y: 20 }}
-
               animate={{ opacity: 1, y: 0 }}
-
               transition={{ duration: 0.3, delay: 0.7 }}
-
               className="space-y-3"
-
             >
 
               <div className="tile-standard">
@@ -551,11 +669,8 @@ export function CompanionProfilePage() {
                   {companion.hobbies.map((h) => (
 
                     <span
-
                       key={h}
-
                       className="bg-subtle-bg rounded-full px-3 py-1 text-xs font-semibold text-primary"
-
                     >
 
                       {h}
@@ -579,11 +694,8 @@ export function CompanionProfilePage() {
                   {companion.interests.map((h) => (
 
                     <span
-
                       key={h}
-
                       className="bg-subtle-bg rounded-full px-3 py-1 text-xs font-semibold text-primary"
-
                     >
 
                       {h}
@@ -603,15 +715,10 @@ export function CompanionProfilePage() {
             {/* Action Buttons */}
 
             <motion.div
-
               initial={{ opacity: 0, y: 20 }}
-
               animate={{ opacity: 1, y: 0 }}
-
               transition={{ duration: 0.3, delay: 0.8 }}
-
               className="flex gap-3 pt-4"
-
             >
 
               <button className="tile-action-row text-headline font-medium">
@@ -621,19 +728,12 @@ export function CompanionProfilePage() {
               </button>
 
               <button 
-
                 onClick={() => setIsFollowing(!isFollowing)}
-
                 className={`font-medium transition-all duration-200 ${
-
                   isFollowing 
-
                     ? "tile-action-row text-headline" 
-
                     : "tile-action-active"
-
                 }`}
-
               >
 
                 {isFollowing ? "Following" : "Follow"}
@@ -647,15 +747,10 @@ export function CompanionProfilePage() {
         ) : tab === "Events" ? (
 
           <motion.div
-
             initial={{ opacity: 0, y: 20 }}
-
             animate={{ opacity: 1, y: 0 }}
-
             transition={{ duration: 0.3, delay: 0.2 }}
-
             className="space-y-4"
-
           >
 
             {companion.events?.map((event) => (
@@ -675,13 +770,9 @@ export function CompanionProfilePage() {
                       <div className="flex-shrink-0 w-20 h-20 overflow-hidden rounded-tile">
 
                         <img
-
                           src={event.photos[0]}
-
                           alt={event.name}
-
                           className="h-full w-full object-cover"
-
                         />
 
                       </div>
@@ -723,15 +814,10 @@ export function CompanionProfilePage() {
                           <div className="relative">
 
                             <button
-
                               onClick={() => setShowEventMenu(
-
                                 showEventMenu === event.id ? null : event.id
-
                               )}
-
                               className="p-1 hover:bg-zinc-100 rounded-full transition-colors"
-
                             >
 
                               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -751,11 +837,8 @@ export function CompanionProfilePage() {
                               <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-10 min-w-[120px]">
 
                                 <button
-
                                   onClick={() => handleShareEvent(event.id)}
-
                                   className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-
                                 >
 
                                   Share
@@ -763,11 +846,8 @@ export function CompanionProfilePage() {
                                 </button>
 
                                 <button
-
                                   onClick={() => handleReportEvent(event.id, event.name)}
-
                                   className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-
                                 >
 
                                   Report
@@ -791,11 +871,8 @@ export function CompanionProfilePage() {
                     {/* Click to expand hint */}
 
                     <button
-
                       onClick={() => handleEventClick(event.id)}
-
                       className="w-full mt-3 text-xs text-primary hover:text-primary/80 transition-colors"
-
                     >
 
                       Click to view details →
@@ -815,13 +892,9 @@ export function CompanionProfilePage() {
                     <div className="relative h-48 overflow-hidden">
 
                       <img
-
                         src={event.photos[0]}
-
                         alt={event.name}
-
                         className="h-full w-full object-cover"
-
                       />
 
                       {event.photos.length > 1 && (
@@ -879,15 +952,10 @@ export function CompanionProfilePage() {
                         <div className="relative">
 
                           <button
-
                             onClick={() => setShowEventMenu(
-
                               showEventMenu === event.id ? null : event.id
-
                             )}
-
                             className="p-1 hover:bg-zinc-100 rounded-full transition-colors"
-
                           >
 
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -907,11 +975,8 @@ export function CompanionProfilePage() {
                             <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-zinc-200 py-1 z-10 min-w-[120px]">
 
                               <button
-
                                 onClick={() => handleShareEvent(event.id)}
-
                                 className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-
                               >
 
                                 Share
@@ -919,11 +984,8 @@ export function CompanionProfilePage() {
                               </button>
 
                               <button
-
                                 onClick={() => handleReportEvent(event.id, event.name)}
-
                                 className="w-full px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
-
                               >
 
                                 Report
@@ -971,13 +1033,9 @@ export function CompanionProfilePage() {
                               <div key={index} className="aspect-square overflow-hidden rounded-tile">
 
                                 <img
-
                                   src={photo}
-
                                   alt={`${event.name} photo ${index + 2}`}
-
                                   className="h-full w-full object-cover"
-
                                 />
 
                               </div>
@@ -995,11 +1053,8 @@ export function CompanionProfilePage() {
                       {/* Collapse button */}
 
                       <button
-
                         onClick={() => handleEventClick(event.id)}
-
                         className="w-full py-2 text-sm text-primary hover:text-primary/80 transition-colors"
-
                       >
 
                         ← Show less
@@ -1021,13 +1076,9 @@ export function CompanionProfilePage() {
         ) : (
 
           <motion.div
-
             initial={{ opacity: 0, y: 20 }}
-
             animate={{ opacity: 1, y: 0 }}
-
             transition={{ duration: 0.3, delay: 0.2 }}
-
           >
 
             <div className="columns-2 gap-3 [column-fill:_balance]">
@@ -1037,23 +1088,16 @@ export function CompanionProfilePage() {
                 <div key={p.id} className="mb-3 break-inside-avoid">
 
                   <button
-
                     onClick={() => handlePostClick(p.id)}
-
                     className="w-full text-left overflow-hidden rounded-tile bg-white shadow-standard-card hover:shadow-floating-bar transition-all duration-200 hover:scale-[1.02]"
-
                   >
 
                     <div className={idx % 3 === 0 ? "h-44" : idx % 3 === 1 ? "h-56" : "h-40"}>
 
                       <img
-
                         src={p.imageUrl}
-
                         alt={p.caption}
-
                         className="h-full w-full object-cover"
-
                       />
 
                     </div>
@@ -1064,31 +1108,11 @@ export function CompanionProfilePage() {
 
                       <div className="flex items-center gap-2 text-xs text-zinc-600">
 
-                        <button
+                        <span>{p.likes || 0} Likes</span>
 
-                          onClick={(e) => {
+                        <span>•</span>
 
-                            e.stopPropagation();
-
-                            // TODO: Implement like functionality
-
-                            console.log("Like post:", p.id);
-
-                          }}
-
-                          className="flex items-center gap-1 hover:text-red-500 transition-colors"
-
-                        >
-
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-
-                          </svg>
-
-                          {p.likes || 0}
-
-                        </button>
+                        <span>{p.comments || 0} Comments</span>
 
                       </div>
 
@@ -1124,12 +1148,243 @@ export function CompanionProfilePage() {
 
       />
 
+      {/* Comment & Send Like Modal */}
+
+      <AnimatePresence>
+
+        {showLikeModal && selectedElement && (
+
+          <motion.div 
+
+            initial={{ opacity: 0 }}
+
+            animate={{ opacity: 1 }}
+
+            exit={{ opacity: 0 }}
+
+            className="fixed inset-0 z-50 flex items-end justify-center"
+
+          >
+
+            {/* Backdrop */}
+
+            <motion.div
+
+              initial={{ opacity: 0 }}
+
+              animate={{ opacity: 1 }}
+
+              exit={{ opacity: 0 }}
+
+              onClick={handleCloseModal}
+
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+
+            />
+
+            {/* Modal Content */}
+
+            <motion.div
+
+              initial={{ y: "100%", opacity: 0 }}
+
+              animate={{ y: 0, opacity: 1 }}
+
+              exit={{ y: "100%", opacity: 0 }}
+
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+
+              onClick={(e) => e.stopPropagation()}
+
+              className="relative w-full max-w-md mx-auto bg-white rounded-t-2xl shadow-2xl p-6 mb-safe"
+
+            >
+
+              {/* Header */}
+
+              <div className="flex items-center justify-between mb-4">
+
+                <div className="text-lg font-semibold text-[#1A1A1A]">
+
+                  {companion.name}
+
+                </div>
+
+                <button
+
+                  onClick={handleCloseModal}
+
+                  className="p-2 text-[#717171] hover:text-[#1A1A1A] transition-colors"
+
+                >
+
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+
+                  </svg>
+
+                </button>
+
+              </div>
+
+              {/* Target Context */}
+
+              <div className="mb-4 p-3 bg-[#F8F9FA] rounded-lg">
+
+                {selectedElement.type === 'photo' ? (
+
+                  <div className="flex items-center gap-3">
+
+                    <img
+
+                      src={selectedElement.thumbnailUrl}
+
+                      alt="Photo"
+
+                      className="w-12 h-12 object-cover rounded"
+
+                    />
+
+                    <span className="text-sm text-[#1A1A1A]">Photo</span>
+
+                  </div>
+
+                ) : (
+
+                  <div className="text-sm text-[#1A1A1A] italic leading-relaxed">
+
+                    "{selectedElement.content}"
+
+                  </div>
+
+                )}
+
+              </div>
+
+              {/* Comment Input */}
+
+              <div className="mb-4">
+
+                <textarea
+
+                  value={commentText}
+
+                  onChange={(e) => setCommentText(e.target.value.slice(0, 250))}
+
+                  placeholder={
+
+                    selectedElement.type === 'photo' 
+
+                      ? "What caught your eye about this photo?"
+
+                      : "Share your thoughts on this prompt..."
+
+                  }
+
+                  rows={3}
+
+                  className="w-full resize-none rounded-lg border border-[#F2F2F2] bg-white p-3 text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F]"
+
+                />
+
+                <div className="text-right text-xs text-[#717171] mt-1">
+
+                  {commentText.length}/250
+
+                </div>
+
+              </div>
+
+              {/* Action Row */}
+
+              <div className="flex items-center justify-between gap-3">
+
+                {/* Like Only Button */}
+
+                <button
+
+                  onClick={handleLikeOnly}
+
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+
+                    likeOnly 
+
+                      ? 'bg-[#67295F] text-white' 
+
+                      : 'bg-[#F2F2F2] text-[#717171]'
+
+                  }`}
+
+                >
+
+                  <svg 
+
+                    className={`w-4 h-4 ${
+
+                      likeOnly ? 'fill-white stroke-white' : 'stroke-[#717171]'
+
+                    }`}
+
+                    fill="none" 
+
+                    strokeWidth="1" 
+
+                    viewBox="0 0 24 24"
+
+                  >
+
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+
+                  </svg>
+
+                  <span className="text-sm font-medium">
+
+                    Like Only
+
+                  </span>
+
+                </button>
+
+                {/* Send Like Button */}
+
+                <button
+
+                  onClick={handleSendLike}
+
+                  disabled={!commentText.trim() && !likeOnly}
+
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+
+                    commentText.trim() || likeOnly
+
+                      ? 'bg-[#67295F] text-white hover:bg-[#5A2047]'
+
+                      : 'bg-[#E5E5E5] text-[#A9A9A9] cursor-not-allowed'
+
+                  }`}
+
+                >
+
+                  Send Like
+
+                </button>
+
+              </div>
+
+            </motion.div>
+
+          </motion.div>
+
+        )}
+
+      </AnimatePresence>
+
     </div>
 
   );
 
 }
-
 
 
 

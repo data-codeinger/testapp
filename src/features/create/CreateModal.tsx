@@ -1,6 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
+import { useLocation } from "react-router-dom";
+import type { Activity } from "../../types";
+import { DualRangeSlider } from "../../components/DualRangeSlider";
 
 type CreateModalType = 'activity' | 'event' | 'post';
 
@@ -12,8 +15,14 @@ interface CreateModalProps {
 
 // Activity Form Component
 function ActivityForm({ onClose }: { onClose: () => void }) {
+  const location = useLocation();
+  const editMode = location.state?.editMode;
+  const editingActivity = location.state?.activity as Activity | undefined;
+  const activityDataFromState = location.state?.activityData as Activity | undefined;
+  
   const [formData, setFormData] = useState({
     activityType: '',
+    intention: '',
     location: '',
     date: '',
     guests: '',
@@ -22,9 +31,48 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
     gender: ''
   });
 
+  const [ageRange, setAgeRange] = useState<[number, number]>([22, 35]);
+
   const [locationInput, setLocationInput] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+  // Initialize form with editing data if in edit mode
+  useEffect(() => {
+    if (editMode && (editingActivity || activityDataFromState)) {
+      const activity = editingActivity || activityDataFromState;
+      if (!activity) return;
+      
+      // Extract activity type from intention or activity name
+      let activityType = '';
+      if (activity.intention && Array.isArray(activity.intention)) {
+        activityType = activity.intention[0] || '';
+      } else if (activity.intention) {
+        activityType = activity.intention;
+      }
+      
+      setFormData({
+        activityType: activityType,
+        intention: Array.isArray(activity.intention) 
+          ? activity.intention[0] 
+          : activity.intention || '',
+        location: activity.locations[0] || '',
+        date: activity.date || '',
+        guests: '',
+        fees: activity.paidBy || '',
+        plan: activity.description || '',
+        gender: ''
+      });
+      setSelectedLocations(activity.locations || []);
+      
+      // Pre-fill age range if it exists
+      if (activity.ageRange) {
+        setAgeRange([activity.ageRange.min, activity.ageRange.max]);
+      } else {
+        setAgeRange([22, 35]); // Default range
+      }
+    }
+  }, [editMode, editingActivity, activityDataFromState]);
 
   const activityTypes = [
     { id: 'breakfast', label: 'Breakfast', icon: '🍳' },
@@ -47,6 +95,16 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
     { id: 'shopping', label: 'Shopping', icon: '🛍️' },
     { id: 'wandering', label: 'Wandering', icon: '🚶' },
     { id: 'bike-riding', label: 'Bike Riding', icon: '🚴' }
+  ];
+
+  const intentionOptions = [
+    { value: 'life-partner', label: 'Life Partner' },
+    { value: 'serious-relationship', label: 'Serious Relationship' },
+    { value: 'friendship', label: 'Friendship' },
+    { value: 'networking', label: 'Networking' },
+    { value: 'activity-buddy', label: 'Activity Buddy' },
+    { value: 'casual-dating', label: 'Casual Dating' },
+    { value: 'new-in-town', label: 'New in Town' }
   ];
 
   const guestOptions = [
@@ -111,11 +169,24 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
   };
 
   const handleSubmit = () => {
-    const activityData = {
+    const activityFormData = {
       ...formData,
-      locations: selectedLocations
+      locations: selectedLocations,
+      ageRange: { min: ageRange[0], max: ageRange[1] }
     };
-    console.log('Activity Data:', activityData);
+
+    if (editMode && (editingActivity || activityDataFromState)) {
+      const activity = editingActivity || activityDataFromState;
+      // Update existing activity
+      console.log('Updating activity:', activity?.id, activityFormData);
+      // In a real app, this would make a PATCH/PUT request to updateActivity API
+      // For now, we'll just log and close
+    } else {
+      // Create new activity
+      console.log('Creating activity:', activityFormData);
+      // In a real app, this would make a POST request to createActivity API
+    }
+    
     onClose();
   };
 
@@ -141,6 +212,23 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Intention */}
+      <div>
+        <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Intention</label>
+        <select 
+          value={formData.intention}
+          onChange={(e) => setFormData(prev => ({ ...prev, intention: e.target.value }))}
+          className="w-full rounded-lg border border-[#F2F2F2] bg-white px-4 py-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#67295F]"
+        >
+          <option value="">Select intention</option>
+          {intentionOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Location */}
@@ -221,6 +309,17 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
         />
       </div>
 
+      {/* Age Range */}
+      <div>
+        <DualRangeSlider
+          min={18}
+          max={70}
+          step={1}
+          value={ageRange}
+          onChange={setAgeRange}
+        />
+      </div>
+
       {/* Guests Filter */}
       <div>
         <label className="block text-sm font-semibold text-[#1A1A1A] mb-3">Guests</label>
@@ -288,9 +387,9 @@ function ActivityForm({ onClose }: { onClose: () => void }) {
       <button
         onClick={handleSubmit}
         className="w-full bg-[#1A1A1A] text-white py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
-        disabled={!formData.activityType || selectedLocations.length === 0 || !formData.plan}
+        disabled={!formData.activityType || !formData.intention || selectedLocations.length === 0 || !formData.plan}
       >
-        Create Activity
+        {editMode ? 'SAVE CHANGES' : 'CREATE ACTIVITY'}
       </button>
     </div>
   );
@@ -499,9 +598,12 @@ function PostForm({ onClose }: { onClose: () => void }) {
 }
 
 export function CreateModal({ open, onClose, type }: CreateModalProps) {
+  const location = useLocation();
+  const editMode = location.state?.editMode;
+  
   const getModalTitle = () => {
     switch (type) {
-      case 'activity': return 'Create Activity';
+      case 'activity': return editMode ? 'Edit Activity' : 'Create Activity';
       case 'event': return 'Create Event';
       case 'post': return 'Create Post';
       default: return 'Create';

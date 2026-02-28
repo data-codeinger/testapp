@@ -7,7 +7,7 @@ export type Companion = {
   hobbies: string[];
   interests: string[];
   identity: { gender: string; job: string; city: string };
-  posts: Array<{ id: string; imageUrl: string; caption: string; likes?: number }>;
+  posts: Array<{ id: string; imageUrl: string; caption: string; likes?: number; comments?: number }>;
   events?: Array<{
     id: string;
     name: string;
@@ -35,6 +35,10 @@ export type Activity = {
   date?: string;
   intention?: string;
   paidBy?: string;
+  ageRange?: {
+    min: number;
+    max: number;
+  };
 };
 
 export type Message = {

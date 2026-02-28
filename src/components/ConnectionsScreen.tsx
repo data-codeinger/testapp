@@ -2,6 +2,39 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAppState } from "../state/AppState";
 
+// Search component
+const SearchBar = ({ connections, onBack }: { connections: any[], onBack: () => void }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredConnections = connections.filter(connection => 
+    connection.userName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  return (
+    <div className="mb-4">
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search connections..."
+          className="w-full px-4 py-3 pr-10 border border-[#F2F2F2] rounded-lg text-sm text-[#1A1A1A] placeholder-[#717171] focus:outline-none focus:border-[#67295F]"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 p-2 text-[#717171] hover:text-[#1A1A1A]"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 interface ConnectionsScreenProps {
   onBack: () => void;
 }
@@ -9,12 +42,21 @@ interface ConnectionsScreenProps {
 export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
   const { connectionRequests, connections, acceptConnectionRequest, declineConnectionRequest, disconnectConnection } = useAppState();
   const [activeTab, setActiveTab] = useState<'requests' | 'active' | 'blocked'>('requests');
-
+  const [searchQuery, setSearchQuery] = useState('');
+  
   // Mock data for blocked users
   const [blockedUsers] = useState([
     { id: "b1", name: "Alex Johnson", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face", blockedDate: "2024-01-15" },
     { id: "b2", name: "Sam Wilson", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face", blockedDate: "2024-01-10" }
   ]);
+  
+  const filteredConnections = connections.filter(connection => 
+    connection.userName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredRequests = connectionRequests.filter(request => 
+    request.requesterName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
@@ -25,11 +67,14 @@ export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
           className="flex items-center gap-2 text-[#1A1A1A] font-medium"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7 7" />
           </svg>
           Connections
         </button>
       </div>
+
+      {/* Search Bar */}
+      <SearchBar connections={connections} onBack={onBack} />
 
       {/* Segmented Tabs */}
       <div className="bg-[#FFFFFF] border-b border-[#F2F2F2] px-4 py-2">
@@ -69,7 +114,7 @@ export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
       <div className="px-4 py-6">
         {activeTab === 'requests' && (
           <div className="space-y-4">
-            {connectionRequests.length === 0 ? (
+            {filteredRequests.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -80,7 +125,7 @@ export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
                 <p className="text-[#717171]">When someone wants to connect, you'll see their request here</p>
               </motion.div>
             ) : (
-              connectionRequests.map((request, index) => (
+              filteredRequests.map((request, index) => (
                 <motion.div
                   key={request.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -126,7 +171,7 @@ export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
 
         {activeTab === 'active' && (
           <div className="space-y-4">
-            {connections.length === 0 ? (
+            {filteredConnections.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -134,13 +179,10 @@ export function ConnectionsScreen({ onBack }: ConnectionsScreenProps) {
               >
                 <div className="text-6xl mb-4">🤝</div>
                 <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">No Active Connections</h3>
-                <p className="text-[#717171] mb-6">Start connecting with people to build your network</p>
-                <button className="bg-[#67295F] text-white px-6 py-2 rounded-lg font-medium">
-                  Discover People
-                </button>
+                <p className="text-[#717171]">Start connecting with people to build your network</p>
               </motion.div>
             ) : (
-              connections.map((connection, index) => (
+              filteredConnections.map((connection, index) => (
                 <motion.div
                   key={connection.id}
                   initial={{ opacity: 0, y: 20 }}

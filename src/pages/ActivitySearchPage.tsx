@@ -333,7 +333,12 @@ export function ActivitySearchPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="space-y-6"
+              className="flex gap-4 overflow-x-scroll pb-4" 
+              style={{ 
+                scrollSnapType: 'x mandatory',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}
             >
               {filteredActivities.length === 0 ? (
                 <div className="text-center py-8">

@@ -140,7 +140,14 @@ export function ActivityCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
-      className="bg-white border-b border-[#F2F2F2]"
+      className="bg-white border-b border-[#F2F2F2] flex-shrink-0" 
+      style={{ 
+        width: '100%',
+        maxWidth: '400px',
+        scrollSnapAlign: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.7)',
+        backdropFilter: 'blur(10px)'
+      }}
     >
       {/* Large Photo at Top - Full-Bleed Image Card (4:5 aspect ratio) */}
       <div className="w-full aspect-[4/5] overflow-hidden relative">
@@ -227,7 +234,11 @@ export function ActivityCard({
       </div>
       
       {/* Content Area */}
-      <div className="bg-white">
+      <div className="bg-white" 
+           style={{ 
+             backgroundColor: 'rgba(255, 255, 255, 0.7)',
+             backdropFilter: 'blur(10px)'
+           }}>
         {/* Activity Info - Only in discover mode */}
         {mode === 'discover' && (
           <div 
@@ -267,7 +278,11 @@ export function ActivityCard({
         )}
 
         {/* Bottom Action Strip */}
-        <div className="px-4 py-3 bg-white">
+        <div className="px-4 py-3 bg-white"
+             style={{ 
+               backgroundColor: 'rgba(255, 255, 255, 0.7)',
+               backdropFilter: 'blur(10px)'
+             }}>
           {mode === 'owner' ? (
             // Owner mode buttons
             <div className="flex items-center justify-between">
